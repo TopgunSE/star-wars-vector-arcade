@@ -1,0 +1,986 @@
+<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Luke Skywalker – T-65 RED FIVE – REAL COCKPIT MK XI</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#020510;color:#fff;font:15px system-ui;overflow:hidden;cursor:none}canvas{display:block}
+#hud{opacity:.62;font-size:12px;position:fixed;top:12px;left:12px;background:linear-gradient(130deg,#0b1517ed,#1a2925d5);border:1px solid #8b9a8475;box-shadow:0 0 24px #008cff26,inset 0 0 16px #009dff15;padding:12px 17px;border-radius:6px;line-height:1.7;z-index:2;letter-spacing:.4px;backdrop-filter:blur(5px)}
+#controls{position:fixed;right:10px;top:10px;z-index:3;display:flex;gap:8px}
+button{background:#f8d94e;color:#101423;border:0;border-radius:8px;padding:10px 13px;font-weight:750;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}
+#help{position:fixed;bottom:10px;left:10px;background:#071024c9;padding:10px;border-radius:9px;z-index:2}
+#crosshair{position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);pointer-events:none;z-index:2;color:#7aff8e;font:700 35px monospace;text-shadow:0 0 8px #00ff66,0 1px 3px #000;line-height:1;user-select:none}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:#7aff8e;box-shadow:0 0 6px #00ff66}
+#crosshair::before{height:2px;width:72px;left:50%;top:50%;transform:translate(-50%,-50%)}
+#crosshair::after{width:2px;height:72px;left:50%;top:50%;transform:translate(-50%,-50%)}
+#cockpit{position:fixed;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
+#cockpit .frame{fill:#182332;stroke:#718395;stroke-width:3}
+#cockpit .trim{fill:none;stroke:#91a2b0;stroke-width:2}
+#cockpit .glass{fill:#142938;fill-opacity:.20}
+#crosshair{z-index:4}
+#cinema{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at center,transparent 47%,#01040b80 100%)}
+#cinema:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0px,transparent 3px,#5db8ff07 4px);opacity:.45}
+#targetHud{display:none;position:fixed;right:20px;top:95px;border:1px solid #8b9a847c;background:#0a1916b8;padding:8px 12px;color:#88e9ff;font:12px monospace;letter-spacing:2px;z-index:2;pointer-events:none}
+#hitFlash{position:fixed;inset:0;pointer-events:none;background:#f84c2460;opacity:0;z-index:3;transition:opacity .13s}
+#message{position:fixed;top:42%;left:0;width:100%;text-align:center;font-size:28px;font-weight:800;text-shadow:0 2px 9px #000;pointer-events:none;z-index:2}
+#shop{display:none;position:fixed;inset:5% 6%;background:#071224f5;border:2px solid #e7c64c;border-radius:16px;padding:18px;z-index:5;overflow:auto}
+#shop.open{display:block}#shop h2{margin:0 0 10px;color:#ffe46b}#shop h3{margin:14px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.card{border:1px solid #536985;background:#15243a;border-radius:10px;padding:12px;min-width:0}
+.card strong{display:block;color:#fff}.card p{font-size:13px;color:#d3deef;min-height:34px}
+.card button{width:100%}#notice{color:#ffdf78;min-height:22px}#shopClose{float:right}
+@media(max-width:650px){#hud{font-size:12px;padding:8px}#controls{top:auto;bottom:62px}#help{font-size:11px;max-width:70%}#shop{inset:2%;padding:12px}}
+#flightBanner{position:fixed;top:13px;left:50%;transform:translateX(-50%);z-index:5;color:#a9f9ff;background:#051320c9;border:1px solid #398ca6;border-radius:7px;padding:7px 15px;font:700 13px system-ui;letter-spacing:2px;pointer-events:none}#performanceBtn{position:fixed;right:12px;bottom:12px;z-index:5;background:#142c3c;color:#b9f8ff;border:1px solid #448da4;padding:9px;border-radius:6px} </style></head><body>
+<div id="cinema"></div>
+<div id="targetHud">RED FIVE // SYSTEM ONLINE<br>WEAPONS ● ARMED</div><div id="hitFlash"></div><div id="hud">🌟 LUKE SKYWALKER<br>⭐ Poäng: <b id="score">0</b><br>🪙 Credits: <b id="credits">0</b><br>❤️ Liv: <b id="lives">3</b><br>🚀 Skepp: <b id="shipname">X-Wing</b><br>🔧 Laser <b id="laserlevel">1</b> · Motor <b id="enginelevel">1</b> · Sköld <b id="shieldlevel">1</b></div>
+<div id="controls"><button id="startGame" style="background:#65e9a5">▶ SPELA NU</button><button id="shopOpen">🛒 Hangar (B)</button><button id="restart">↻ Starta om</button></div>
+<div id="crosshair" aria-label="Siktekorn">×</div><div id="message">X-WING MK XIX · NIVÅ 1–10 · TRYCK SPELA NU!<br><small style="font-size:17px">Besegra fiender och köp nya skepp!</small></div>
+<div id="help">👨‍✈️ RIKTIG X-WING 3D-MODELL · LUKES COCKPIT · 🖱️ Mus: styr och sikta · Mellanslag: skjut · B: hangar · R: starta om</div>
+<section id="shop" aria-label="Hangar och butik"><button id="shopClose">✕ Tillbaka</button><h2>🚀 Lukes hangar</h2><p style='color:#a8d8ff'>🧪 T-65 Cinematic Cockpit 2026: vitgrått skrov, röda markeringar, R2-D2 och fyra öppna S-vingar. Fortfarande en egen förenklad 3D-modell, inte en exakt filmmodell.</p><div>🪙 Dina credits: <b id="shopCredits">0</b> · Poäng och credits tjänas genom att skjuta fiender.</div>
+<h3>Byt eller köp rymdskepp</h3><div class="grid" id="ships"></div><h3>Uppgradera ditt eget skepp</h3><div class="grid" id="upgrades"></div><p id="notice" aria-live="polite"></p></section>
+<div id="flightBanner">RED FIVE • FLIGHT SYSTEMS ONLINE • MUS = STYR • SPACE = LASER</div><button id="performanceBtn">⚡ LÄTT GRAFIK</button>
+<style id="luke-v3-style">#leaderboard{position:fixed;right:12px;top:100px;z-index:4;width:195px;max-width:30vw;background:#071529df;border:1px solid #568ca8;border-radius:9px;padding:12px;color:#e3f7ff;font:13px system-ui;pointer-events:none}#leaderboard>strong{display:block;margin-bottom:8px;color:#ffdf7b}.leaderRow{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #ffffff22}.leaderRow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:650px){#leaderboard{top:95px;width:130px;max-width:38vw;font-size:11px;padding:7px}}#missionSetup{position:fixed;inset:0;z-index:20;background:#020916eF;display:flex;align-items:center;justify-content:center;padding:16px;cursor:auto}#missionSetup.hidden{display:none}#missionCard{width:min(560px,96vw);max-height:92vh;overflow:auto;background:#10223b;border:2px solid #f5d35c;border-radius:14px;padding:22px;color:white;font:16px system-ui}#missionCard label{display:block;margin:12px 0 5px}#missionCard input,#missionCard select{width:100%;padding:10px;background:#eaf3ff;color:#101827;border:0;border-radius:6px;font-size:16px}#missionCard button{margin-top:16px}#scoreHistory{font-size:13px;line-height:1.7;max-height:130px;overflow:auto}#missionStats{position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:5;color:#ffe98d;background:#071827bd;padding:5px 12px;border-radius:5px;font:700 12px system-ui;pointer-events:none}#missileBtn{position:fixed;bottom:65px;right:14px;z-index:6}body.externalView #cinematicCanopy,body.externalView #cinematicStatus,body.externalView #cinematicCorner,body.externalView #cinematicVignette{display:none!important}body.externalView #cockpit{display:none!important}</style>
+<div id="missionSetup"><div id="missionCard"><h2>🚀 RED FIVE · Ny mission</h2><p>Skriv dit pilotnavn før varje runda. Dina tidigare poäng sparas på den här datorn.</p><label for="pilotName">Pilotnamn</label><input id="pilotName" maxlength="22" value="Luke Skywalker" autocomplete="off"><p><strong>🎯 Du börjar på nivå 1.</strong> Varje 250 poäng tar dig vidare till nästa nivå, ända till nivå 10!</p><label for="viewMode">Kameraläge</label><select id="viewMode"><option value="cockpit">Inifrån cockpit</option><option value="outside">Se hela skeppet</option></select><button id="missionGo">▶ Starta mission</button><h3>🏆 Tidigare resultat</h3><div id="scoreHistory">Inga resultat ännu.</div><p style="font-size:12px;color:#bbd9ed">M = missil (max 3 per runda). Missiler köps i hangaren.</p></div></div><aside id="leaderboard"><strong>🏆 HIGHSCORE</strong><div id="liveLeaderboard">Inga resultat ännu</div></aside><div id="missionStats">Nivå 1 · Missiler: 0/3</div><button id="missileBtn" type="button">🚀 Missil (M)</button>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/+esm';
+
+const $=s=>document.querySelector(s);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x020510);scene.fog=new THREE.FogExp2(0x020510,.005);
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,900);camera.position.set(0,5,20);scene.add(camera);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});renderer.setPixelRatio(Math.min(devicePixelRatio,1.15));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;renderer.setSize(innerWidth,innerHeight);document.body.appendChild(renderer.domElement);
+document.querySelector('#performanceBtn').onclick=()=>{const low=renderer.getPixelRatio()>0.8;renderer.setPixelRatio(low?0.7:Math.min(devicePixelRatio,1.15));document.querySelector('#performanceBtn').textContent=low?'✨ HÖG GRAFIK':'⚡ LÄTT GRAFIK'};
+scene.add(new THREE.HemisphereLight(0xa6c3e0,0x2d2119,1.05));scene.add(new THREE.AmbientLight(0x879ac5,.55));const light=new THREE.DirectionalLight(0xfff0d9,2.35);light.position.set(5,10,9);scene.add(light);
+const stars=[];for(let i=0;i<1100;i++)stars.push((Math.random()-.5)*480,(Math.random()-.5)*290,-Math.random()*750);
+const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(stars,3));scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:.65})));
+// Billig 2026-känsla: procedurgenererad nebulosa som bakgrund, ingen tung postprocessing.
+const nebulaCanvas=document.createElement('canvas');nebulaCanvas.width=512;nebulaCanvas.height=512;
+const nctx=nebulaCanvas.getContext('2d');nctx.fillStyle='#020510';nctx.fillRect(0,0,512,512);
+for(const [x,y,r,col] of [[120,190,230,'44,62,166'],[380,280,240,'126,30,106'],[270,420,190,'18,126,160']]){
+ const gr=nctx.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba('+col+',0.32)');gr.addColorStop(.42,'rgba('+col+',0.12)');gr.addColorStop(1,'rgba('+col+',0)');nctx.fillStyle=gr;nctx.fillRect(0,0,512,512);
+}
+for(let i=0;i<450;i++){const x=Math.random()*512,y=Math.random()*512,a=.15+Math.random()*.6;nctx.fillStyle='rgba(215,235,255,'+a+')';nctx.fillRect(x,y,Math.random()<.08?2:1,1)}
+const nebulaTexture=new THREE.CanvasTexture(nebulaCanvas);nebulaTexture.colorSpace=THREE.SRGBColorSpace;
+const nebulaBackdrop=new THREE.Mesh(new THREE.PlaneGeometry(650,650),new THREE.MeshBasicMaterial({map:nebulaTexture,depthWrite:false,fog:false}));nebulaBackdrop.position.z=-350;scene.add(nebulaBackdrop);
+const blueFill=new THREE.PointLight(0x348dff,32,65);blueFill.position.set(-12,4,5);scene.add(blueFill);
+const redFill=new THREE.PointLight(0xff426d,24,55);redFill.position.set(12,-5,-15);scene.add(redFill);
+const trailMat=new THREE.MeshBasicMaterial({color:0x4acbff,transparent:true,opacity:.16,depthWrite:false,blending:THREE.AdditiveBlending});
+const trails=[];
+for(let i=0;i<35;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(.025,.025,1+Math.random()*5),trailMat);p.position.set((Math.random()-.5)*80,(Math.random()-.5)*48,-Math.random()*180);scene.add(p);trails.push(p)}
+let flashUntil=0;
+const mat=c=>new THREE.MeshStandardMaterial({color:c,metalness:.55,roughness:.4});
+const white=mat(0xe2e7f2),red=mat(0xdf454d),blue=mat(0x548ce0),gold=mat(0xe2b957),dark=mat(0x454d60),black=mat(0x131827);
+const green=new THREE.MeshBasicMaterial({color:0x48ff7b}),enemyLaser=new THREE.MeshBasicMaterial({color:0xff4a3d});
+const cyan=new THREE.MeshStandardMaterial({color:0x70eaff,emissive:0x126c99,emissiveIntensity:1.6,metalness:.3});
+const orange=new THREE.MeshBasicMaterial({color:0xff8d29});
+const cockpit=new THREE.MeshStandardMaterial({color:0x152d50,metalness:.85,roughness:.13});
+const engineGlow=new THREE.MeshBasicMaterial({color:0x44caff});
+
+// Fysisk cockpit i 3D: alla delar är monterade på kameran och har verkligt djup.
+const cabin=new THREE.Group();camera.add(cabin);
+// Real X-Wing cockpit: original OBJ geometry and UV textures, packed as embedded GLB.
+// It replaces the old procedural LEGO-like cabin entirely.
+cabin.visible=false;
+const cockpitModelGroup=new THREE.Group();camera.add(cockpitModelGroup);
+// Letvægtscockpit: brug den indbyggede 3D-kabine i stedet for en 5 MB indlejret model.
+cabin.visible=true;
+document.querySelector('#help').textContent='🚀 MK20 · 3D COCKPIT · RADAR · 🖱️ styr/sigta · Mellanslag skjut · M missil · B hangar';
+window.addEventListener('keydown',ev=>{
+ if(ev.key==='j'||ev.key==='J')cockpitModelGroup.position.x-=.15;
+ if(ev.key==='l'||ev.key==='L')cockpitModelGroup.position.x+=.15;
+ if(ev.key==='i'||ev.key==='I')cockpitModelGroup.position.y+=.15;
+ if(ev.key==='k'||ev.key==='K')cockpitModelGroup.position.y-=.15;
+ if(ev.key==='u'||ev.key==='U')cockpitModelGroup.position.z+=.2;
+ if(ev.key==='o'||ev.key==='O')cockpitModelGroup.position.z-=.2;
+});
+
+// Procedural micro-scratches and worn paint; tiny textures for older GPUs.
+const paintCanvas=document.createElement('canvas');paintCanvas.width=256;paintCanvas.height=256;
+const pc=paintCanvas.getContext('2d');pc.fillStyle='#555d5e';pc.fillRect(0,0,256,256);
+for(let i=0;i<2200;i++){const x=Math.random()*256,y=Math.random()*256;pc.fillStyle=Math.random()>.5?'rgba(215,217,207,.055)':'rgba(12,17,20,.09)';pc.fillRect(x,y,Math.random()*13+1,Math.random()*1.5+.3)}
+for(let i=0;i<110;i++){pc.strokeStyle='rgba(15,19,22,.17)';pc.beginPath();const x=Math.random()*256,y=Math.random()*256;pc.moveTo(x,y);pc.lineTo(x+Math.random()*35+8,y+Math.random()*3-1.5);pc.stroke()}
+const paintTex=new THREE.CanvasTexture(paintCanvas);paintTex.colorSpace=THREE.SRGBColorSpace;
+// PBR surface relief: worn aluminium with real light-reactive microstructure.
+const relief=document.createElement('canvas');relief.width=256;relief.height=256;
+const rc=relief.getContext('2d');rc.fillStyle='#888';rc.fillRect(0,0,256,256);
+for(let i=0;i<5000;i++){const x=Math.random()*256,y=Math.random()*256;const v=90+Math.floor(Math.random()*100);rc.fillStyle=`rgba(${v},${v},${v},.32)`;rc.fillRect(x,y,Math.random()*4+1,Math.random()*1.1+.2)}
+for(let i=0;i<120;i++){const x=Math.random()*256,y=Math.random()*256;rc.strokeStyle='rgba(235,235,235,.3)';rc.beginPath();rc.moveTo(x,y);rc.lineTo(x+Math.random()*50+4,y+Math.random()*2);rc.stroke()}
+const reliefTex=new THREE.CanvasTexture(relief);reliefTex.wrapS=reliefTex.wrapT=THREE.RepeatWrapping;
+const metal=new THREE.MeshStandardMaterial({map:paintTex,bumpMap:reliefTex,bumpScale:.028,color:0xb3b5b0,metalness:.75,roughness:.49});
+const edge=new THREE.MeshStandardMaterial({color:0x9a9e9b,metalness:.83,roughness:.38,bumpMap:reliefTex,bumpScale:.009});
+const shadow=new THREE.MeshStandardMaterial({color:0x121719,metalness:.3,roughness:.95});
+const panel=new THREE.MeshStandardMaterial({color:0x252b2c,metalness:.48,roughness:.64,bumpMap:reliefTex,bumpScale:.014});
+const screenMat=new THREE.MeshBasicMaterial({color:0x21493c});
+const greenLamp=new THREE.MeshBasicMaterial({color:0x83d8a3});
+const amberLamp=new THREE.MeshBasicMaterial({color:0xc79c57});
+// Rounded, beveled metal components replace the hard-edged box primitives.
+const roundedCache=new Map();
+function roundedGeo(w,h,d){
+ const key=[w,h,d].join(':');if(roundedCache.has(key))return roundedCache.get(key);
+ const radius=Math.min(w,h,d)*.19;
+ const sh=new THREE.Shape();const x=-w/2,y=-h/2,r=Math.min(radius,w*.35,h*.35);
+ sh.moveTo(x+r,y);sh.lineTo(x+w-r,y);sh.quadraticCurveTo(x+w,y,x+w,y+r);
+ sh.lineTo(x+w,y+h-r);sh.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+ sh.lineTo(x+r,y+h);sh.quadraticCurveTo(x,y+h,x,y+h-r);
+ sh.lineTo(x,y+r);sh.quadraticCurveTo(x,y,x+r,y);
+ const bevel=Math.min(d*.16,r*.55);
+ const g=new THREE.ExtrudeGeometry(sh,{depth:Math.max(.004,d-2*bevel),bevelEnabled:true,bevelThickness:bevel,bevelSize:bevel*.45,bevelSegments:2,curveSegments:3,steps:1});
+ g.translate(0,0,-d/2+bevel);roundedCache.set(key,g);return g;
+}
+function cbox(w,h,d,x,y,z,m,rot=0){const o=new THREE.Mesh(roundedGeo(w,h,d),m);o.position.set(x,y,z);o.rotation.z=rot;cabin.add(o);return o}
+function beam(a,b,r,mat){const dir=new THREE.Vector3().subVectors(new THREE.Vector3(...b),new THREE.Vector3(...a));const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,dir.length(),14),mat);o.position.copy(new THREE.Vector3(...a).add(new THREE.Vector3(...b)).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());cabin.add(o);return o}
+function knob(x,y,z,r,mat){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.065,9),mat);o.rotation.x=Math.PI/2;o.position.set(x,y,z);cabin.add(o)}
+// Vindrutan: riktiga stag på olika avstånd, inte en ritad ram på skärmen.
+beam([-2.9,1.75,-3.8],[2.9,1.75,-3.8],.11,metal);
+beam([-2.9,1.75,-3.8],[-1.42,-1.08,-3.15],.14,metal);
+beam([2.9,1.75,-3.8],[1.42,-1.08,-3.15],.14,metal);
+beam([-1.42,-1.08,-3.15],[-.91,-1.42,-2.75],.12,metal);
+beam([1.42,-1.08,-3.15],[.91,-1.42,-2.75],.12,metal);
+beam([-2.9,1.75,-3.8],[-3.45,-.95,-2.7],.12,shadow);
+beam([2.9,1.75,-3.8],[3.45,-.95,-2.7],.12,shadow);
+beam([-2.87,1.68,-3.72],[2.87,1.68,-3.72],.023,edge);
+// A real, lightly tinted canopy in the 3D world, not a screen overlay.
+const canopyGlass=new THREE.MeshPhysicalMaterial({color:0x8da5a7,metalness:.06,roughness:.18,transparent:true,opacity:.075,depthWrite:false,side:THREE.DoubleSide});
+function glassTriangle(a,b,c){const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute([...a,...b,...c],3));geo.computeVertexNormals();const m=new THREE.Mesh(geo,canopyGlass);m.renderOrder=3;cabin.add(m)}
+glassTriangle([-2.87,1.69,-3.77],[2.87,1.69,-3.77],[1.39,-1.02,-3.14]);
+glassTriangle([-2.87,1.69,-3.77],[1.39,-1.02,-3.14],[-1.39,-1.02,-3.14]);
+// Metallic inner seal, mechanical hinges and joints.
+for(const side of [-1,1]){
+ beam([side*2.84,1.73,-3.72],[side*2.85,1.77,-3.77],.17,shadow);
+ for(let j=0;j<4;j++){
+  const t=j/3,x=side*(2.88-(2.88-1.43)*t),y=1.7-(2.76*t),z=-3.78+.62*t;
+  cbox(.15,.07,.09,x,y,z,edge,side*.34);
+ }
+}
+// Smooth curved cockpit side rails, shaped as continuous tubular arcs.
+for(const side of [-1,1]){
+ const curve=new THREE.CatmullRomCurve3([
+  new THREE.Vector3(side*3.05,-1.95,-1.3),
+  new THREE.Vector3(side*2.83,-1.55,-2.25),
+  new THREE.Vector3(side*2.52,-1.08,-3.05),
+  new THREE.Vector3(side*2.18,-.86,-3.62)
+ ]);
+ const rail=new THREE.Mesh(new THREE.TubeGeometry(curve,18,.16,9,false),metal);cabin.add(rail);
+ const trimCurve=new THREE.CatmullRomCurve3([
+  new THREE.Vector3(side*3.0,-1.82,-1.28),new THREE.Vector3(side*2.79,-1.43,-2.26),
+  new THREE.Vector3(side*2.46,-.99,-3.08),new THREE.Vector3(side*2.12,-.79,-3.6)
+ ]);
+ cabin.add(new THREE.Mesh(new THREE.TubeGeometry(trimCurve,18,.025,6,false),edge));
+}
+// MK VI: organiska, kontinuerliga paneler istället för rektangulära lådor.
+function surface(grid,material){
+ const vertices=[],indices=[];const rows=grid.length,cols=grid[0].length;
+ for(const row of grid)for(const v of row)vertices.push(...v);
+ for(let j=0;j<rows-1;j++)for(let i=0;i<cols-1;i++){
+  const a=j*cols+i,b=a+1,c=a+cols,d=c+1;
+  indices.push(a,c,b,b,c,d);
+ }
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();
+ const mesh=new THREE.Mesh(geo,material);mesh.material.side=THREE.DoubleSide;cabin.add(mesh);return mesh;
+}
+function curvedRail(points,r,mat){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,32,r,10,false),mat);cabin.add(mesh);return mesh}
+for(const side of [-1,1]){
+ const rows=[];
+ for(let j=0;j<=12;j++){
+  const t=j/12,z=-4.0+t*3.65;
+  const outer=2.25+1.0*t,inner=1.57+.68*t;
+  const top=-.90-.22*t;
+  rows.push([
+   [side*inner,top,z],
+   [side*(inner+.18),top+.07,z],
+   [side*(outer-.18),top+.15,z],
+   [side*outer,top-.08,z],
+   [side*(outer+.13),-2.45,z]
+  ]);
+ }
+ surface(rows,metal);
+ curvedRail(rows.map(r=>r[2]),.075,edge);
+ curvedRail(rows.map(r=>r[1]),.04,shadow);
+ // Djupa, infällda konsoler som följer skrovets linjer.
+ const consoleRows=[];
+ for(let j=0;j<=12;j++){
+  const t=j/12,z=-3.45+t*2.45,x=side*(1.86+.43*t);
+  consoleRows.push([[x,-1.05-.15*t,z],[x+side*.22,-1.12-.14*t,z],[x+side*.47,-1.32-.11*t,z]]);
+ }
+ surface(consoleRows,panel);
+ for(let j=0;j<9;j++){
+  const z=-3.25+j*.23,x=side*(2.03+j*.033);
+  knob(x,-1.02-j*.014,z,.035,j%3===0?amberLamp:edge);
+ }
+}
+// Rundad instrumentkåpa, välvd över pilotens knän.
+const dashRows=[];
+for(let j=0;j<=10;j++){
+ const z=-3.95+j*.12,row=[];
+ for(let i=0;i<=28;i++){
+  const x=-2.2+i*(4.4/28),q=Math.abs(x)/2.2;
+  row.push([x,-1.16-.27*q*q-.17*j/10,z]);
+ }
+ dashRows.push(row);
+}
+surface(dashRows,panel);
+curvedRail(Array.from({length:29},(_,i)=>{const x=-2.2+i*4.4/28;return [x,-1.16-.27*Math.pow(Math.abs(x)/2.2,2),-3.95]}),.075,metal);
+// MK IX: baked cockpit detail atlas: hundreds of crisp markings in ONE texture draw call.
+// This is a physical instrument surface, not a floating HUD overlay.
+function cockpitAtlas(){
+ const cv=document.createElement('canvas');cv.width=1024;cv.height=384;
+ const c=cv.getContext('2d');
+ const bg=c.createLinearGradient(0,0,0,384);bg.addColorStop(0,'#303638');bg.addColorStop(.3,'#141b20');bg.addColorStop(1,'#080c11');
+ c.fillStyle=bg;c.fillRect(0,0,1024,384);
+ const rng=(n)=>{let v=Math.sin(n*127.13+29.7)*43758.5453;return v-Math.floor(v)};
+ for(let i=0;i<4500;i++){const x=rng(i*2)*1024,y=rng(i*2+1)*384;c.fillStyle=i%3?'rgba(225,230,220,.035)':'rgba(0,0,0,.12)';c.fillRect(x,y,rng(i+19)*5+.5,.7)}
+ // Cast metal borders and separate functional instrument clusters.
+ for(let k=0;k<3;k++){
+  const x=22+k*337;
+  c.fillStyle='#090f12';c.fillRect(x,18,318,347);
+  c.strokeStyle='#737e7e';c.lineWidth=3;c.strokeRect(x+2,20,314,343);
+  c.strokeStyle='#1d2426';c.lineWidth=8;c.strokeRect(x+9,27,300,329);
+  c.fillStyle='#a8aba0';c.font='bold 17px monospace';c.fillText(['FLIGHT SYSTEMS','WEAPON CONTROL','POWER / SHIELDS'][k],x+24,58);
+  for(let i=0;i<9;i++){
+   const px=x+28+(i%3)*95,py=86+Math.floor(i/3)*84;
+   c.fillStyle='#080f12';c.fillRect(px,py,78,65);
+   c.strokeStyle='#536064';c.lineWidth=2;c.strokeRect(px,py,78,65);
+   c.fillStyle=['#6ac8b1','#c4a469','#a9c7d3'][k];c.font='bold 10px monospace';c.fillText(['NAV','GYRO','ALT','LAS','SFO','ION','ENG','AUX','SYS'][i],px+8,py+14);
+   for(let q=0;q<5;q++){
+    const val=rng(k*200+i*11+q);
+    c.fillStyle=val>.55?'#a4d8bf':'#45554d';c.fillRect(px+8+q*13,py+27,8,20*val+5);
+   }
+   c.fillStyle='#9da8a4';c.font='9px monospace';c.fillText('0'+(i+1)+' / OK',px+9,py+59);
+  }
+  for(let b=0;b<5;b++){c.fillStyle='#5c6869';c.beginPath();c.arc(x+24+b*65,342,3,0,7);c.fill()}
+ }
+ const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;tx.anisotropy=2;return tx;
+}
+const atlas=cockpitAtlas();
+const atlasMaterial=new THREE.MeshStandardMaterial({map:atlas,metalness:.18,roughness:.72,side:THREE.DoubleSide});
+const dashPlate=new THREE.Mesh(new THREE.PlaneGeometry(3.15,1.05),atlasMaterial);
+dashPlate.position.set(0,-1.82,-2.54);dashPlate.rotation.x=-.24;cabin.add(dashPlate);
+// Weathered, sculpted hood around the display and raised upper instrument rail.
+const hoodPoints=[];for(let i=0;i<=24;i++){
+ const x=-1.86+i*3.72/24;
+ hoodPoints.push([x,-1.17-.28*Math.pow(Math.abs(x)/1.86,1.8),-2.76]);
+}
+curvedRail(hoodPoints,.12,shadow);
+curvedRail(hoodPoints.map(p=>[p[0],p[1]+.055,p[2]-.035]),.022,edge);
+// Real 3D mechanical toggles on the side consoles, each with a base and metal stalk.
+for(const side of [-1,1]){
+ for(let i=0;i<12;i++){
+  const z=-3.1+i*.16,x=side*(2.18+i*.02),y=-1.16-i*.013;
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(.045,.055,.024,8),shadow);
+  base.position.set(x,y,z);cabin.add(base);
+  const lever=new THREE.Mesh(new THREE.CylinderGeometry(.014,.018,.115,7),i%4===0?amberLamp:edge);
+  lever.position.set(x,y+.07,z);lever.rotation.z=side*(i%3-1)*.25;cabin.add(lever);
+ }
+}
+// Brushed canopy rivets and rubber weather sealing around the actual 3D frame.
+for(const side of [-1,1]){
+ for(let i=1;i<=10;i++){
+  const t=i/11;
+  const a=new THREE.Vector3(side*2.9,1.75,-3.8),b=new THREE.Vector3(side*1.42,-1.08,-3.15);
+  const p=a.lerp(b,t);
+  const rivet=new THREE.Mesh(new THREE.SphereGeometry(.028,6,4),edge);rivet.position.copy(p);cabin.add(rivet);
+ }
+}
+// Subtle, practical cabin light illuminating the actual instrument geometry.
+const dashLight=new THREE.PointLight(0x83c5ad,2.2,5,2);dashLight.position.set(0,-1.35,-2.1);cabin.add(dashLight);
+const sideLight=new THREE.PointLight(0xffb26b,1.2,4,2);sideLight.position.set(-2,-1.25,-2.3);cabin.add(sideLight);
+
+// Cockpitens centrala måldator är kvar som en fysisk, infälld apparat.
+
+cbox(1.05,.68,.5,0,-1.34,-2.87,shadow);
+// Fungerande grön taktisk radar på den fysiska cockpit-skärmen.
+const radarCanvas=document.createElement('canvas');radarCanvas.width=256;radarCanvas.height=160;
+const radarCtx=radarCanvas.getContext('2d');
+const radarTex=new THREE.CanvasTexture(radarCanvas);
+radarTex.colorSpace=THREE.SRGBColorSpace;
+radarTex.minFilter=THREE.LinearFilter;
+const radarScreen=new THREE.Mesh(new THREE.PlaneGeometry(.75,.45),new THREE.MeshBasicMaterial({map:radarTex,side:THREE.DoubleSide,depthWrite:false}));
+radarScreen.position.set(0,-1.30,-2.485);
+camera.add(radarScreen);
+let radarElapsed=0,radarAngle=0;
+function updateRadar(dt){
+ radarElapsed+=dt;radarAngle=(radarAngle+dt*1.8)%(Math.PI*2);
+ if(radarElapsed<.09)return;
+ radarElapsed=0;
+ const c=radarCtx,W=256,H=160,cx=128,cy=89,R=59;
+ c.fillStyle='#02160b';c.fillRect(0,0,W,H);
+ c.strokeStyle='rgba(75,235,115,.22)';c.lineWidth=1;
+ for(let r of [20,39,59]){c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.stroke()}
+ c.beginPath();c.moveTo(cx-R,cy);c.lineTo(cx+R,cy);c.moveTo(cx,cy-R);c.lineTo(cx,cy+R);c.stroke();
+ // Svepande radarljus.
+ c.save();c.translate(cx,cy);c.rotate(radarAngle);
+ const grad=c.createLinearGradient(0,0,R,0);grad.addColorStop(0,'rgba(90,255,125,.05)');grad.addColorStop(1,'rgba(90,255,125,.65)');
+ c.strokeStyle=grad;c.lineWidth=2;c.beginPath();c.moveTo(0,0);c.lineTo(R,0);c.stroke();c.restore();
+ c.fillStyle='#9cffae';c.beginPath();c.moveTo(cx,cy-5);c.lineTo(cx-5,cy+5);c.lineTo(cx+5,cy+5);c.closePath();c.fill();
+ let contacts=0;
+ for(const e of enemies){
+  const dz=player.position.z-e.position.z;
+  if(dz<0||dz>150)continue;
+  const dx=e.position.x-player.position.x;
+  const x=cx+dx*.95,y=cy-dz*.37;
+  if(Math.hypot(x-cx,y-cy)>R)continue;
+  contacts++;
+  c.fillStyle='#ff695d';c.shadowColor='#ff4d3d';c.shadowBlur=5;
+  c.fillRect(x-2.5,y-2.5,5,5);c.shadowBlur=0;
+ }
+ c.fillStyle='#83e8a0';c.font='bold 11px monospace';c.fillText('RED FIVE / RADAR',9,15);
+ c.font='10px monospace';c.fillText('TGT '+String(contacts).padStart(2,'0'),190,15);
+ c.fillText('RANGE 150',9,151);c.fillText('● ONLINE',187,151);
+ radarTex.needsUpdate=true;
+}
+for(let side of [-1,1]){
+  cbox(.95,.19,.94,side*1.47,-1.27,-2.93,panel,side*.08);
+  for(let row=0;row<3;row++)for(let col=0;col<5;col++){
+    knob(side*(1.14+col*.14),-1.13-row*.12,-2.48,.037,(row+col)%4===0?amberLamp:edge);
+  }
+  // Sidokonsol: fysiska reglage och strömbrytare.
+  cbox(.62,.13,1.48,side*2.27,-1.52,-2.36,panel,side*.12);
+  for(let j=0;j<7;j++)cbox(.065,.065,.08,side*2.26,-1.39,-1.86-j*.17,j%3===0?amberLamp:edge);
+}
+// Physical cockpit console: recessed slots, warning labels and aged switches.
+const recess=new THREE.MeshStandardMaterial({color:0x090d10,metalness:.2,roughness:.96});
+const fadedRed=new THREE.MeshStandardMaterial({color:0x8c3c2f,metalness:.25,roughness:.85});
+for(const side of [-1,1]){
+ for(let i=0;i<6;i++){
+  cbox(.11,.022,.23,side*(1.12+i*.17),-1.085,-3.02,recess);
+  cbox(.045,.035,.13,side*(1.12+i*.17),-1.058,-3.02,i%3===0?fadedRed:edge);
+ }
+ for(let i=0;i<5;i++){
+  cbox(.035,.16,.17,side*2.62,-1.6,-3.1+i*.31,recess);
+  cbox(.038,.07,.09,side*2.60,-1.55,-3.1+i*.31,edge);
+ }
+}
+// Mechanical gunsight housing, not a floating HUD.
+cbox(.78,.07,.72,0,-1.01,-3.3,edge);
+cbox(.46,.055,.42,0,-.96,-3.31,recess);
+// Sikte-/navigationsdator på sin konsol.
+cbox(.13,.68,.13,0,-1.85,-1.78,metal);
+cbox(.48,.18,.32,0,-1.75,-1.73,shadow);
+// Kontinuerligt formad cockpitbalja med rundad undersida – inga svävande lådor.
+const tubGeo=new THREE.CylinderGeometry(2.55,2.28,4.3,40,1,true,Math.PI*.1,Math.PI*.8);
+const tubMat=new THREE.MeshStandardMaterial({color:0x252b2d,metalness:.55,roughness:.63,bumpMap:reliefTex,bumpScale:.012,side:THREE.DoubleSide});
+const tub=new THREE.Mesh(tubGeo,tubMat);tub.rotation.x=Math.PI/2;tub.rotation.z=Math.PI; tub.position.set(0,-1.02,-2.2);cabin.add(tub);
+// Sluten cockpitbalja: ett ogenomskinligt golv och rundade sidoväggar.
+// Golvet ligger nedanför pilotens ögon och täcker glipan mot rymden.
+const floorMat=new THREE.MeshStandardMaterial({color:0x22282a,metalness:.58,roughness:.7,bumpMap:reliefTex,bumpScale:.02,side:THREE.DoubleSide});
+const floorShape=new THREE.Shape();
+floorShape.moveTo(-2.8,-3.5);floorShape.lineTo(2.8,-3.5);
+floorShape.lineTo(2.55,-.55);floorShape.lineTo(1.75,1.05);
+floorShape.lineTo(-1.75,1.05);floorShape.lineTo(-2.55,-.55);floorShape.closePath();
+const floorGeo=new THREE.ShapeGeometry(floorShape,1);
+const floorMesh=new THREE.Mesh(floorGeo,floorMat);
+floorMesh.rotation.x=-Math.PI/2;floorMesh.position.set(0,-2.36,-2.7);cabin.add(floorMesh);
+// Extra mörk fotbrunn och golvribbor bakom spaken.
+cbox(3.8,.12,3.2,0,-2.48,-2.1,shadow);
+for(let i=-2;i<=2;i++)cbox(.055,.025,2.8,i*.62,-2.405,-2.0,edge);
+// MK IX: sammanhängande cockpitinteriör i stället för synliga lösa lådor.
+// Formpressad främre panel, profilerad med mjuka tvärgående kurvor.
+const leather=new THREE.MeshStandardMaterial({color:0x1b2225,roughness:.96,metalness:.04});
+const gunmetal=new THREE.MeshStandardMaterial({color:0x424c4e,metalness:.54,roughness:.67});
+const inset=new THREE.MeshStandardMaterial({color:0x10191a,metalness:.16,roughness:.88});
+const warning=new THREE.MeshBasicMaterial({color:0xffb75c});
+const cockpitBlue=new THREE.MeshBasicMaterial({color:0x68c2c7});
+// Helgjuten instrumenthuv med en djup, böjd överkant.
+const hoodRows=[];
+for(let j=0;j<=16;j++){
+ const t=j/16,z=-3.35+t*1.48;
+ const row=[];
+ for(let i=0;i<=28;i++){
+  const u=i/28*2-1,x=u*2.13;
+  const arch=Math.pow(Math.abs(u),1.65);
+  const y=-1.30-.32*t-.24*arch+.12*Math.sin(t*Math.PI);
+  row.push([x,y,z]);
+ }
+ hoodRows.push(row);
+}
+surface(hoodRows,leather);
+// Välvd instrumentbåge med försänkta, verkligt placerade instrument.
+for(const side of [-1,1]){
+ const railPts=[];
+ for(let i=0;i<=20;i++){
+  const t=i/20;
+  railPts.push([side*(.72+1.53*t),-1.39-.31*t,-2.16-.54*t]);
+ }
+ curvedRail(railPts,.07,gunmetal);
+ // Knappbank i vinklad sidokonsol, inte en overlay på spelvyn.
+ const bank=new THREE.Group();bank.position.set(side*1.53,-1.73,-1.65);bank.rotation.y=side*.22;bank.rotation.z=-side*.13;cabin.add(bank);
+ const plate=new THREE.Mesh(roundedGeo(.75,.50,.08),inset);bank.add(plate);
+ for(let r=0;r<3;r++)for(let c=0;c<5;c++){
+  const lamp=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.018,8),((r+c)%7===0?warning:(r+c)%4===0?cockpitBlue:gunmetal));
+  lamp.rotation.x=Math.PI/2;lamp.position.set((c-2)*.12,(r-1)*.13,.055);bank.add(lamp);
+ }
+ // Kablar, slangar och skarvar följer den fysiska cockpitväggen.
+ curvedRail([[side*2.2,-1.35,-3.35],[side*2.47,-1.61,-2.72],[side*2.68,-1.94,-1.92],[side*2.54,-2.18,-1.12]],.048,inset);
+ curvedRail([[side*2.29,-1.38,-3.35],[side*2.55,-1.66,-2.72],[side*2.76,-1.98,-1.92],[side*2.62,-2.19,-1.12]],.023,gunmetal);
+}
+// Välvd skyddskåpa runt pilotens fötter och styrspak.
+const footRows=[];
+for(let j=0;j<=14;j++){
+ const t=j/14,z=-3.12+t*3.3,row=[];
+ for(let i=0;i<=24;i++){
+  const u=(i/24*2-1),x=u*1.65;
+  row.push([x,-2.32+.10*u*u-.04*Math.sin(t*Math.PI),z]);
+ }
+ footRows.push(row);
+}
+surface(footRows,shadow);
+// Skruvar i ramarna: små, enkla detaljer som kostar lite grafikprestanda.
+const boltGeo=new THREE.CylinderGeometry(.035,.035,.016,7);
+for(const side of [-1,1])for(let i=0;i<7;i++){
+ const t=i/6;
+ const bolt=new THREE.Mesh(boltGeo,gunmetal);
+ bolt.rotation.x=Math.PI/2;
+ bolt.position.set(side*(2.16+.56*t),-1.00-.42*t,-3.52+2.18*t);
+ cabin.add(bolt);
+}
+// Styrspakens rörliga grupp är kopplad till musens styrning.
+const stickGroup=new THREE.Group();
+stickGroup.position.set(.48,-2.05,-1.72);cabin.add(stickGroup);
+function stickBeam(a,b,r,mat){
+ const va=new THREE.Vector3(...a),vb=new THREE.Vector3(...b),d=vb.clone().sub(va);
+ const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),12),mat);
+ m.position.copy(va.add(vb).multiplyScalar(.5));
+ m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());
+ stickGroup.add(m);return m;
+}
+stickBeam([0,0,0],[0,.52,-.11],.078,shadow);
+const stickGrip=new THREE.Mesh(roundedGeo(.22,.37,.18),metal);
+stickGrip.position.set(0,.65,-.12);stickGroup.add(stickGrip);
+const stickTrigger=new THREE.Mesh(roundedGeo(.09,.12,.11),amberLamp);
+stickTrigger.position.set(0,.78,-.02);stickGroup.add(stickTrigger);
+// Styrspak med grepp och avtryckare.
+
+// Små synliga nitar på vindruteramen.
+for(let side of [-1,1])for(let j=0;j<5;j++)knob(side*(2.8-j*.33),1.55-j*.57,-3.72+j*.12,.035,edge);
+function cylinder(g,r,h,x,y,z,m,rotX=Math.PI/2){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),m);o.rotation.x=rotX;o.position.set(x,y,z);g.add(o);return o}
+function addShipDetails(g,type){
+  if(type==='xwing'){ball(g,.57,0,.55,-.55,cockpit);for(const x of [-3.8,3.8])for(const y of [-.7,.7]){cylinder(g,.13,2,x,y,-2.2,dark);box(g,.6,.05,1.2,x,y+.12,.5,red)}for(const x of [-.52,.52])cylinder(g,.27,.22,x,-.1,2.55,engineGlow)}
+  if(type==='awing'){ball(g,.48,0,.48,-.45,cockpit);for(const x of [-2.5,2.5])cylinder(g,.29,.2,x,0,2.7,engineGlow);box(g,.9,.08,2,0,.36,-1,white)}
+  if(type==='ywing'){ball(g,.6,0,.5,-.8,cockpit);for(const x of [-2.5,2.5]){cylinder(g,.35,.25,x,0,2.65,engineGlow);box(g,.9,.1,1.6,x,.5,-.8,gold)}}
+  if(type==='falcon'){for(const x of [-1.3,1.3]){box(g,.8,.1,1.8,x,.4,-1.2,dark)}ball(g,.65,2.7,.7,.6,cockpit);for(const x of [-1.5,0,1.5])cylinder(g,.55,.16,x,0,3.25,engineGlow);cylinder(g,.45,.3,0,.6,0,dark,0)}
+}
+function addEnemyDetails(g,type){
+  if(type==='tie'||type==='interceptor'){ball(g,.48,0,0,-.8,cockpit);for(const x of [-2.5,2.5]){box(g,.12,.6,1.8,x,0,-.1,dark);box(g,.12,.12,1.6,x,1,0,red)}}
+  if(type==='bomber'){for(const x of [-1.5,1.5]){ball(g,.45,x,.2,-1.6,cockpit);cylinder(g,.3,.25,x,0,2.1,orange)}}
+  if(type==='droid'){ball(g,.4,0,.2,-.95,cockpit);for(const x of [-1.6,1.6])cylinder(g,.28,.2,x,0,1.2,orange)}
+}
+const effects=[];
+function explosion(x,y,z,color=0xffb23e){flashUntil=performance.now()+100;const count=20;for(let i=0;i<count;i++){const p=new THREE.Mesh(new THREE.SphereGeometry(.12+Math.random()*.19,6,5),new THREE.MeshBasicMaterial({color}));p.position.set(x,y,z);p.userData.velocity=new THREE.Vector3((Math.random()-.5)*16,(Math.random()-.5)*16,(Math.random()-.5)*16);p.userData.life=.4+Math.random()*.4;scene.add(p);effects.push(p)}}
+const nebula=new THREE.Group();scene.add(nebula);
+for(let i=0;i<32;i++){const cloud=new THREE.Mesh(new THREE.SphereGeometry(12+Math.random()*22,12,8),new THREE.MeshBasicMaterial({color:[0x143c83,0x52206f,0x144c61,0x622a43][i%4],transparent:true,opacity:.055,depthWrite:false}));cloud.position.set((Math.random()-.5)*210,(Math.random()-.5)*130,-120-Math.random()*350);cloud.scale.set(2,1,.35);nebula.add(cloud)}
+
+function box(g,w,h,d,x,y,z,m){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);g.add(o);return o}
+function ball(g,r,x,y,z,m){const o=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),m);o.position.set(x,y,z);g.add(o);return o}
+const shipsData=[
+{id:'xwing',name:'X-Wing',price:0,desc:'Balanserad jaktfighter. Din första hjälte!'},
+{id:'awing',name:'A-Wing',price:180,desc:'Snabb och smidig. Perfekt för undanmanövrer.'},
+{id:'ywing',name:'Y-Wing',price:260,desc:'Tungt skepp med starkare sköld.'},
+{id:'falcon',name:'Millennium Falcon',price:500,desc:'Legendariskt skepp med extra eldkraft.'}
+];
+function tapered(g,front,back,length,x,y,z,m){const shape=new THREE.CylinderGeometry(front,back,length,6);const mesh=new THREE.Mesh(shape,m);mesh.rotation.x=Math.PI/2;mesh.position.set(x,y,z);g.add(mesh);return mesh}
+function wing(g,pts,m){const shape=new THREE.Shape();shape.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)shape.lineTo(pts[i][0],pts[i][1]);shape.closePath();const geom=new THREE.ExtrudeGeometry(shape,{depth:.12,bevelEnabled:true,bevelThickness:.04,bevelSize:.05,bevelSegments:1});const o=new THREE.Mesh(geom,m);o.rotation.x=-Math.PI/2;g.add(o);return o}
+function buildShip(type){
+const g=new THREE.Group();
+if(type==='xwing'){
+ // Handbyggd T-65-inspirerad modell, med låg polygonbudget för äldre iMac.
+ const hull=new THREE.MeshStandardMaterial({color:0xc5c6bf,roughness:.82,metalness:.18,flatShading:true});
+ const panel=new THREE.MeshStandardMaterial({color:0x8b938f,roughness:.85,metalness:.22});
+ const stripe=new THREE.MeshStandardMaterial({color:0xa9322d,roughness:.86});
+ const trim=new THREE.MeshStandardMaterial({color:0x333c43,roughness:.7,metalness:.4});
+ const glass=new THREE.MeshStandardMaterial({color:0x163346,roughness:.18,metalness:.65});
+ const yellow=new THREE.MeshBasicMaterial({color:0xe4c35a});
+ function tube(parent,r1,r2,len,x,y,z,mat){const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,len,10),mat);m.rotation.x=Math.PI/2;m.position.set(x,y,z);parent.add(m);return m}
+ function wedge(parent,front,back,len,x,y,z,mat){const geo=new THREE.CylinderGeometry(front,back,len,4);const m=new THREE.Mesh(geo,mat);m.rotation.x=Math.PI/2;m.rotation.z=Math.PI/4;m.position.set(x,y,z);parent.add(m);return m}
+ // Lång kilformad nos med uppdelad pansarplåt.
+ // Äkta kilform: spetsig framdel och bredare bakre kropp, i stället för cylinder.
+ function fuselage(zFront,zBack,wFront,wBack,hFront,hBack,material){
+   const verts=[];const a=[[-wFront,-hFront],[wFront,-hFront],[wFront,hFront],[-wFront,hFront]];
+   const b=[[-wBack,-hBack],[wBack,-hBack],[wBack,hBack],[-wBack,hBack]];
+   for(let i=0;i<4;i++){const j=(i+1)%4;for(const t of [[a[i],zFront],[a[j],zFront],[b[j],zBack],[a[i],zFront],[b[j],zBack],[b[i],zBack]])verts.push(t[0][0],t[0][1],t[1]);}
+   for(const t of [[a[0],zFront],[a[2],zFront],[a[1],zFront],[a[0],zFront],[a[3],zFront],[a[2],zFront],[b[0],zBack],[b[1],zBack],[b[2],zBack],[b[0],zBack],[b[2],zBack],[b[3],zBack]])verts.push(t[0][0],t[0][1],t[1]);
+   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.computeVertexNormals();const m=new THREE.Mesh(geo,material);m.material.side=THREE.DoubleSide;g.add(m);
+ }
+ fuselage(-5.8,.1,.12,.67,.11,.46,hull);
+ fuselage(.1,3.2,.67,.84,.46,.54,hull);
+ // Nose sensor, side armour and panel seams.
+ box(g,.29,.15,.28,0,0,-5.83,trim);
+ for(const side of [-1,1]){
+   box(g,.075,.14,2.55,side*.49,.05,-1.2,panel);
+   box(g,.045,.055,1.8,side*.61,.32,.1,trim);
+   box(g,.12,.07,.8,side*.72,.49,1.65,panel);
+ }
+ box(g,.29,.12,3.3,0,.37,-2.0,panel);
+ box(g,.23,.1,2.2,0,-.39,-2.4,trim);
+ box(g,.47,.08,1.5,0,.45,-3.25,stripe);
+ box(g,.32,.12,.65,0,.48,-4.5,trim);
+ // Cockpit: lång huv med inramade fönster.
+ const canopy=box(g,1.1,.52,2.5,0,.72,-.45,glass);
+ canopy.rotation.x=-.11;
+ for(const x of [-.58,.58])box(g,.09,.28,2.65,x,.75,-.45,trim);
+ for(const z of [-1.62,.43])box(g,1.2,.12,.12,0,.98,z,trim);
+ box(g,.09,.12,2.45,0,1.02,-.45,trim);
+ // Astromekanikern bakom cockpit.
+ tube(g,.37,.37,.65,0,.74,1.45,hull);
+ const droid=ball(g,.38,0,1.08,1.45,hull);droid.scale.y=.7;
+ box(g,.35,.12,.1,0,1.3,1.15,glass);
+ for(const side of [-1,1]){
+   box(g,.09,.23,.28,side*.25,1.1,1.45,glass);
+   box(g,.11,.09,.24,side*.18,1.27,1.62,stripe);
+ }
+ box(g,.12,.05,.15,0,1.36,1.49,trim);
+ box(g,.12,.12,.12,-.23,1.14,1.2,stripe);
+ for(const x of [-.37,.37])box(g,.14,.58,.27,x,.66,1.48,panel);
+ // Fyra separata S-vingar; S-foilernas vinklar ger en tydlig X-siluett bakifrån.
+ for(const side of [-1,1])for(const level of [-1,1]){
+   const foil=new THREE.Group();foil.position.set(side*.53,level*.17,.95);
+   foil.rotation.z=side*level*.22;
+   const shape=new THREE.Shape();
+   shape.moveTo(0,-1.75);shape.lineTo(side*3.75,-1.2);shape.lineTo(side*4.25,1.8);shape.lineTo(0,2.0);shape.closePath();
+   const geom=new THREE.ExtrudeGeometry(shape,{depth:.09,bevelEnabled:false});
+   const mesh=new THREE.Mesh(geom,hull);mesh.rotation.x=-Math.PI/2;foil.add(mesh);
+   // Röd rand på vingens ovansida och flera separata paneler.
+   box(foil,2.15,.055,.37,side*2.35,.11,-.65,stripe);
+   box(foil,1.45,.055,.16,side*2.35,.12,-.12,panel);
+   // Tunna servicepaneler, mekaniska luckor och slitagefält.
+   for(let k=0;k<3;k++){
+     box(foil,.48,.026,.43,side*(1.75+k*.72),.145,.35,k===1?trim:panel);
+     box(foil,.34,.024,.05,side*(1.75+k*.72),.165,.11,trim);
+   }
+   for(let k=0;k<4;k++)box(foil,.06,.04,.55,side*(1.5+k*.64),.15,1.25,panel);
+   box(foil,.22,.055,1.2,side*3.65,.12,.4,trim);
+   for(let k=0;k<3;k++)box(foil,.11,.055,.46,side*(2.05+k*.34),.14,-1.42,stripe);
+   // Fyra individuella motorhus med mörkt intag och blått utblås.
+   tube(foil,.46,.53,2.5,side*1.18,-.05,1.0,panel);
+   tube(foil,.31,.31,.18,side*1.18,-.05,-.36,trim);
+   tube(foil,.33,.33,.12,side*1.18,-.05,2.34,engineGlow);
+   for(const k of [-1,1])box(foil,.09,.13,2.05,side*1.18+k*.29,.33,1.05,trim);
+   // Laserkanoner med smal pipa och mynning längst fram.
+   tube(foil,.115,.13,4.5,side*3.92,.04,-1.85,trim);
+   tube(foil,.18,.2,.7,side*3.92,.04,-3.65,panel);
+   tube(foil,.075,.075,1.05,side*3.92,.04,-4.55,trim);
+   tube(foil,.105,.105,.12,side*3.92,.04,-5.13,stripe);
+   g.add(foil);
+ }
+ // Akterdetaljer och skrovpaneler.
+ for(const x of [-.48,.48]){
+   box(g,.23,.13,1.65,x,.37,2.2,panel);
+   box(g,.13,.07,.9,x,-.36,2.7,trim);
+ }
+
+ // Mk III: små skrovplåtar, målade Red Five-band och mekaniska detaljer.
+ const ivory=new THREE.MeshStandardMaterial({color:0xd9d8ca,roughness:.86,metalness:.12});
+ const grime=new THREE.MeshStandardMaterial({color:0x5d6566,roughness:.96});
+ const redDark=new THREE.MeshStandardMaterial({color:0x842a27,roughness:.9});
+ const amber=new THREE.MeshBasicMaterial({color:0xf3ba5a});
+ // Smala avfasade panelskarvar längs nosens sidor.
+ for(const side of [-1,1]){
+   for(let k=0;k<6;k++){
+     const z=-5.15+k*.75;
+     const width=.18+(z+5.15)*.085;
+     const seam=box(g,.027,.035,.27,side*width,.14+(z+5.15)*.036,z,grime);
+     seam.rotation.y=side*.15;
+   }
+   for(let k=0;k<3;k++)box(g,.12,.04,.3,side*.34,.49,-2.9+k*.7,ivory);
+   box(g,.09,.12,.5,side*.78,.15,2.65,grime);
+ }
+ // Cockpitram med diagonal framruta och två sidorutor.
+ for(const side of [-1,1]){
+   const brace=box(g,.065,.08,.88,side*.45,1.03,-1.23,trim);
+   brace.rotation.x=-.3;
+   box(g,.06,.08,.9,side*.54,1.02,.12,ivory);
+ }
+ // Astromekanikerns paneler och blå sensorögon.
+ for(let i=0;i<7;i++){
+   const a=i*Math.PI*2/7;
+   const eye=box(g,.12,.1,.045,Math.sin(a)*.34,1.12,1.45-Math.cos(a)*.34,i%3===0?glass:blue);
+   eye.rotation.y=a;
+ }
+ box(g,.14,.09,.08,0,1.14,1.09,black);
+ // Fem distinkta röda Red Five-ränder på båda vingparens översidor.
+ for(const side of [-1,1])for(const level of [-1,1]){
+   const foil=g.children.find(o=>o.isGroup && Math.abs(o.position.x-side*.53)<.001 && Math.abs(o.position.y-level*.17)<.001);
+   if(!foil)continue;
+   for(let i=0;i<5;i++){
+     const band=box(foil,.09,.065,.68,side*(2.25+i*.2),.20,-.85,redDark);
+     band.rotation.y=side*.05;
+   }
+   // Exponerade hydraulikcylindrar, kylgaller och slitageplåtar.
+   for(let i=0;i<5;i++)box(foil,.14,.035,.48,side*(1.75+i*.32),.19,.8,i%2?grime:ivory);
+   for(let i=0;i<3;i++){
+     const rib=box(foil,.035,.08,.65,side*(2.0+i*.53),.20,1.5,trim);
+     rib.rotation.y=side*.12;
+   }
+   tube(foil,.16,.16,.55,side*3.92,.04,-3.02,ivory);
+   tube(foil,.085,.085,.14,side*3.92,.04,-5.26,amber);
+   // Luftintag med en mörk öppning och synliga stag.
+   tube(foil,.36,.36,.10,side*1.18,-.05,-.52,black);
+   for(let i=-1;i<=1;i++)box(foil,.55,.035,.04,side*1.18,-.05+i*.11,-.59,grime);
+ }
+ // Små servisrutor och motorfästen i bakre skrovet.
+ for(const side of [-1,1]){
+   for(let i=0;i<5;i++)box(g,.16,.03,.13,side*.48,.55,1.1+i*.36,i%2?grime:ivory);
+   box(g,.22,.11,.85,side*.68,-.35,2.1,grime);
+ }
+ g.userData.model='Egenbyggd T-65 Mk III – extra paneler, fem röda markeringar och mekanik';
+}
+if(type==='awing'){
+ tapered(g,.13,.85,6.2,0,0,-.2,red);
+ wing(g,[[-.6,-3],[-2.9,1.9],[-2.3,3],[2.3,3],[2.9,1.9],[.6,-3]],white);
+ wing(g,[[-.35,-3],[-1.1,.9],[1.1,.9],[.35,-3]],red);
+ const d=ball(g,.65,0,.5,-.6,cockpit);d.scale.set(.85,.5,1.6);
+ for(const x of [-1.7,1.7]){tapered(g,.48,.5,3.8,x,0,1.3,dark);cylinder(g,.38,.2,x,0,3.3,engineGlow);box(g,.2,.6,2.4,x*1.5,.35,1.1,red)}
+}
+if(type==='ywing'){
+ tapered(g,.25,.75,6.5,0,0,-.3,gold);const d=ball(g,.6,0,.6,-1.4,cockpit);d.scale.set(.9,.55,1.5);
+ wing(g,[[-.6,-1.2],[-2.7,-.2],[-2.7,.6],[2.7,.6],[2.7,-.2],[.6,-1.2]],white);
+ for(const x of [-2.65,2.65]){tapered(g,.47,.65,6.8,x,0,1.0,white);cylinder(g,.36,.2,x,0,4.5,engineGlow);for(let k=0;k<5;k++)box(g,.85,.09,.18,x,.5,-1.4+k*.62,dark);tapered(g,.08,.11,2,x,0,-3.2,gold)}
+}
+if(type==='falcon'){
+ const disk=new THREE.Mesh(new THREE.CylinderGeometry(3.5,3.5,.65,32),white);disk.rotation.x=Math.PI/2;g.add(disk);
+ const top=new THREE.Mesh(new THREE.CylinderGeometry(1.5,2.4,.4,24),dark);top.position.set(0,.45,0);g.add(top);
+ for(const x of [-1.65,1.65]){box(g,1.45,.48,3.4,x,0,-2.6,white);box(g,1.15,.15,2,x,.3,-2.2,dark)}
+ const side=box(g,2.9,.55,.9,3.8,.15,.7,white);side.rotation.y=-.28;
+ ball(g,.8,5.1,.25,.45,cockpit);box(g,1.5,.16,1.8,0,.8,.4,white);
+ const dish=new THREE.Mesh(new THREE.SphereGeometry(.95,16,8,0,Math.PI*2,0,Math.PI/2),dark);dish.rotation.x=-.5;dish.position.set(-1.1,1,1);g.add(dish);
+ for(let x=-2.7;x<=2.7;x+=.55)cylinder(g,.22,.16,x,0,3.32,engineGlow);
+ for(const x of [-2.5,2.5])for(const z of [-1.2,1.4])box(g,.5,.05,1.4,x,.37,z,dark);
+}
+return g}
+let saved={credits:0,owned:['xwing'],selected:'xwing',levels:{laser:1,engine:1,shield:1}};
+try{const raw=JSON.parse(localStorage.getItem('luke_starwars_v2')||'null');if(raw&&Number.isFinite(raw.credits)&&Array.isArray(raw.owned)&&raw.levels){saved={...saved,...raw,credits:Math.max(0,raw.credits),owned:[...new Set(['xwing',...raw.owned.filter(x=>shipsData.some(s=>s.id===x))])],levels:{laser:Math.max(1,Math.min(5,raw.levels.laser||1)),engine:Math.max(1,Math.min(5,raw.levels.engine||1)),shield:Math.max(1,Math.min(5,raw.levels.shield||1))}};if(!saved.owned.includes(saved.selected))saved.selected='xwing'}}catch(e){}
+function persist(){try{localStorage.setItem('luke_starwars_v2',JSON.stringify(saved))}catch(e){}}
+let player=buildShip(saved.selected);scene.add(player);player.position.set(0,0,8);
+function enemy(type){const g=new THREE.Group();g.userData={type,hp:type==='bomber'?3:type==='interceptor'?2:1,reward:type==='bomber'?40:type==='interceptor'?25:type==='droid'?15:10,radius:type==='bomber'?3.1:2.3};if(type==='tie'){ball(g,.9,0,0,0,dark);box(g,5,.15,.2,0,0,0,dark);for(let x of [-2.5,2.5])box(g,.2,3.5,3.5,x,0,0,black)}
+if(type==='interceptor'){ball(g,.8,0,0,0,dark);for(let x of [-2.3,2.3]){box(g,.25,4.1,2.4,x,0,0,red);box(g,4.4,.15,.2,0,0,0,dark)}}
+if(type==='bomber'){for(let x of [-1.5,1.5])box(g,2,1.3,4,x,0,0,dark);box(g,4,.3,1,0,0,0,black);ball(g,.65,0,.4,0,red)}
+if(type==='droid'){ball(g,1.1,0,0,0,red);for(let x of [-1.6,1.6])box(g,1.3,.3,2.2,x,0,0,dark)}
+addEnemyDetails(g,type);return g}
+let enemies=[],shots=[],score=0,lives=3,playing=false,paused=false,shopOpen=false,spawn=0,cooldown=0,invuln=0,gameOver=false;let bossSpawned=false,bossDefeated=false;let missionLevel=1,pilotName='Luke Skywalker',viewMode='cockpit',missiles=0,missilesUsed=0,roundRecorded=false,asteroidHits=0;
+
+function getHistory(){try{return JSON.parse(localStorage.getItem('luke_xwing_scores_v3')||'[]')}catch(e){return []}}
+function showHistory(){const entries=getHistory();const board=document.querySelector('#liveLeaderboard');if(board){board.replaceChildren();if(!entries.length){board.textContent='Inga resultat ännu';}else{entries.slice(0,8).forEach((e,i)=>{const row=document.createElement('div');row.className='leaderRow';const name=document.createElement('span');name.textContent=(i+1)+'. '+e.name;const points=document.createElement('strong');points.textContent=e.score;row.append(name,points);board.append(row)})}}document.querySelector('#scoreHistory').textContent=entries.length?entries.slice(0,10).map((e,i)=>`${i+1}. ${e.name} · ${e.score} poäng · nivå ${e.level}`).join(' | '):'Inga resultat ännu.'}
+function recordRound(){if(roundRecorded)return;roundRecorded=true;const entries=getHistory();entries.push({name:pilotName,score,level:missionLevel,date:new Date().toISOString()});entries.sort((a,b)=>b.score-a.score);try{localStorage.setItem('luke_xwing_scores_v3',JSON.stringify(entries.slice(0,30)))}catch(e){}showHistory()}
+function openMission(){if(playing&&!roundRecorded)recordRound();playing=false;paused=true;document.querySelector('#missionSetup').classList.remove('hidden');document.querySelector('#startGame').style.display='';showHistory()}
+function beginMission(){for(let i=flyingMissiles.length-1;i>=0;i--)removeRocketAt(i);const name=document.querySelector('#pilotName').value.trim();if(!name){document.querySelector('#pilotName').focus();return}pilotName=name.slice(0,22);missionLevel=1;bossSpawned=false;bossDefeated=false;viewMode=document.querySelector('#viewMode').value;document.body.classList.toggle('externalView',viewMode==='outside');missilesUsed=0;roundRecorded=false;document.querySelector('#missionSetup').classList.add('hidden');paused=false;reset()}
+document.querySelector('#missionGo').addEventListener('click',beginMission);
+function updateMissionStats(){document.querySelector('#missionStats').textContent=`${pilotName} · Nivå ${missionLevel} · Missiler ${missiles}/3 · Använda ${missilesUsed}/3`;document.querySelector('#missileBtn').disabled=!playing||missiles<=0||missilesUsed>=3}
+// MK18: Visible guided rockets, smoke trails and large impact explosions.
+const flyingMissiles=[];
+const rocketBodyMat=new THREE.MeshStandardMaterial({color:0xe8e9e2,metalness:.65,roughness:.3});
+const rocketNoseMat=new THREE.MeshStandardMaterial({color:0xe34235,metalness:.4});
+const rocketFireMat=new THREE.MeshBasicMaterial({color:0xff9d24});
+function makeRocket(){
+ const g=new THREE.Group();
+ const body=new THREE.Mesh(new THREE.CylinderGeometry(.28,.34,2.25,12),rocketBodyMat);body.rotation.x=Math.PI/2;g.add(body);
+ const nose=new THREE.Mesh(new THREE.ConeGeometry(.29,.72,12),rocketNoseMat);nose.rotation.x=-Math.PI/2;nose.position.z=-1.43;g.add(nose);
+ for(let i=0;i<4;i++){const fin=new THREE.Mesh(new THREE.BoxGeometry(.64,.075,.70),rocketNoseMat);fin.position.set(0,0,.78);fin.rotation.z=i*Math.PI/2;g.add(fin)}
+ // Elden peger bagud (+Z), mens missilen flyver fremad (-Z).
+ const fireGroup=new THREE.Group();fireGroup.position.z=1.55;g.add(fireGroup);
+ const outer=new THREE.Mesh(new THREE.ConeGeometry(.44,3.2,12),new THREE.MeshBasicMaterial({color:0xff4a08,transparent:true,opacity:.82,depthWrite:false,blending:THREE.AdditiveBlending}));outer.rotation.x=Math.PI/2;outer.position.z=1.15;fireGroup.add(outer);
+ const middle=new THREE.Mesh(new THREE.ConeGeometry(.30,2.5,12),new THREE.MeshBasicMaterial({color:0xffc126,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending}));middle.rotation.x=Math.PI/2;middle.position.z=.85;fireGroup.add(middle);
+ const core=new THREE.Mesh(new THREE.ConeGeometry(.17,1.9,10),new THREE.MeshBasicMaterial({color:0xffffdb,depthWrite:false,blending:THREE.AdditiveBlending}));core.rotation.x=Math.PI/2;core.position.z=.55;fireGroup.add(core);
+ const glow=new THREE.PointLight(0xff7920,9,15);glow.position.z=2.0;g.add(glow);
+ g.userData.fireGroup=fireGroup;
+ return g;
+}
+function missileSmoke(pos,fiery=false){
+ const puff=new THREE.Mesh(new THREE.SphereGeometry(fiery?.34:.36,7,6),new THREE.MeshBasicMaterial({color:fiery?0xff7b15:0xa9b2bc,transparent:true,opacity:fiery?.9:.56,depthWrite:false,blending:fiery?THREE.AdditiveBlending:THREE.NormalBlending}));
+ puff.position.copy(pos);puff.userData.velocity=new THREE.Vector3((Math.random()-.5)*3,(Math.random()-.5)*3,1+Math.random()*3);puff.userData.life=fiery?.28:.85;puff.userData.initialLife=puff.userData.life;puff.userData.smoke=true;puff.userData.fiery=fiery;scene.add(puff);effects.push(puff);
+}
+function hugeMissileExplosion(pos,boss=false){
+ // Tre lag af ildkugler, en stor chokbølge og gnister. Begrænset antal for ældre iMac.
+ const size=boss?25:15;
+ for(let j=0;j<3;j++){
+  const fireball=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),new THREE.MeshBasicMaterial({color:[0xffffff,0xffbd26,0xff4308][j],transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending}));
+  fireball.position.copy(pos);fireball.userData.velocity=new THREE.Vector3();fireball.userData.life=1.2+j*.2;fireball.userData.initialLife=fireball.userData.life;fireball.userData.megaBall=true;fireball.userData.megaSize=size*(j===0?.65:j===1?.95:1.25);scene.add(fireball);effects.push(fireball);
+ }
+ for(let i=0;i<(boss?95:65);i++){
+  const spark=new THREE.Mesh(new THREE.SphereGeometry(.2+Math.random()*.46,6,5),new THREE.MeshBasicMaterial({color:[0xffed86,0xff921e,0xff3910,0xffffff][i%4],transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending}));
+  spark.position.copy(pos);const direction=new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize();
+  spark.userData.velocity=direction.multiplyScalar(size*(1+Math.random()*1.5));spark.userData.life=.8+Math.random()*.9;spark.userData.initialLife=spark.userData.life;scene.add(spark);effects.push(spark);
+ }
+ const shock=new THREE.Mesh(new THREE.SphereGeometry(1,18,12),new THREE.MeshBasicMaterial({color:0xffdd81,transparent:true,opacity:.85,wireframe:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+ shock.position.copy(pos);shock.userData.velocity=new THREE.Vector3();shock.userData.life=1.1;shock.userData.initialLife=1.1;shock.userData.shock=true;shock.userData.shockSize=size*1.6;scene.add(shock);effects.push(shock);
+ flashUntil=performance.now()+350;
+}
+function removeRocketAt(index){const m=flyingMissiles[index];scene.remove(m.mesh);flyingMissiles.splice(index,1)}
+function updateFlyingMissiles(dt){
+ for(let i=flyingMissiles.length-1;i>=0;i--){
+  const m=flyingMissiles[i];m.age+=dt;
+  const target=m.target&&enemies.includes(m.target)?m.target:null;
+  const goal=target?target.position.clone():m.fallback;
+  const toGoal=goal.clone().sub(m.mesh.position);const distance=toGoal.length();
+  if(target&&distance<Math.max(2.7,target.userData.radius||3)){
+   hugeMissileExplosion(target.position.clone(),target.userData.type==='destroyer');
+   if(target.userData.type==='destroyer'){
+    target.userData.hp=Math.max(0,target.userData.hp-12);
+    if(target.userData.hp===0){bossDefeated=true;recordRound();playing=false;gameOver=true;$('#message').textContent='🏆 SEGER! STAR DESTROYER BESEGRAD!';scene.remove(target);enemies.splice(enemies.indexOf(target),1)}
+   }else{score+=target.userData.reward*2;saved.credits+=target.userData.reward;scene.remove(target);enemies.splice(enemies.indexOf(target),1);persist();updateHUD()}
+   removeRocketAt(i);updateMissionStats();continue;
+  }
+  if(!target&&distance<3){hugeMissileExplosion(goal,false);removeRocketAt(i);continue}
+  if(m.age>7){removeRocketAt(i);continue}
+  const desired=toGoal.normalize();m.direction.lerp(desired,Math.min(1,dt*5)).normalize();
+  m.mesh.position.addScaledVector(m.direction,Math.min(distance,dt*48));
+  m.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),m.direction);
+  m.smokeTimer+=dt;
+  if(m.mesh.userData.fireGroup){const flame=m.mesh.userData.fireGroup;flame.scale.z=.85+Math.random()*.55;flame.scale.x=flame.scale.y=.85+Math.random()*.3;}
+  if(m.smokeTimer>.055){m.smokeTimer=0;const behind=m.mesh.position.clone().addScaledVector(m.direction,-2.2);missileSmoke(behind,true);if(Math.random()<.65)missileSmoke(behind.clone().addScaledVector(m.direction,-.6),false)}
+ }
+}
+function launchMissile(){
+ if(!playing||paused||missiles<=0||missilesUsed>=3)return;
+ missiles--;missilesUsed++;
+ const target=enemies.reduce((best,e)=>!best||e.position.z>best.position.z?e:best,null);
+ const rocket=makeRocket();rocket.position.set(player.position.x+1.6,player.position.y-.6,player.position.z-2.7);
+ scene.add(rocket);
+ flyingMissiles.push({mesh:rocket,target,age:0,smokeTimer:0,direction:new THREE.Vector3(0,0,-1),fallback:new THREE.Vector3(mouseTarget.x,mouseTarget.y,-115)});
+ $('#message').textContent='🚀 MISSIL AVFYRAD!';setTimeout(()=>{if(playing&&$('#message').textContent==='🚀 MISSIL AVFYRAD!')$('#message').textContent=''},650);
+ updateMissionStats();
+}
+document.querySelector('#missileBtn').addEventListener('click',launchMissile);
+const keys={};let mouseTarget={x:0,y:0};let mouseCursor={x:innerWidth/2,y:innerHeight/2};
+function updateHUD(){const nextLevel=Math.min(10,1+Math.floor(score/250));if(playing&&nextLevel>missionLevel){missionLevel=nextLevel;$('#message').textContent='🚀 NIVÅ '+missionLevel+'!';setTimeout(()=>{if(playing&&$('#message').textContent.includes('NIVÅ'))$('#message').textContent=''},1800);updateMissionStats();if(missionLevel===10&&!bossSpawned){bossSpawned=true;const flagship=enemy('destroyer');flagship.position.set(0,1,-115);scene.add(flagship);enemies.push(flagship);$('#message').textContent='⚠️ IMPERIAL STAR DESTROYER!'}}$('#score').textContent=score;$('#credits').textContent=Math.floor(saved.credits);$('#shopCredits').textContent=Math.floor(saved.credits);$('#lives').textContent=lives;$('#shipname').textContent=shipsData.find(s=>s.id===saved.selected).name;for(let x of ['laser','engine','shield'])$('#'+x+'level').textContent=saved.levels[x]}
+function reset(){for(let e of [...enemies,...shots,...effects])scene.remove(e);enemies=[];shots=[];effects.length=0;score=0;lives=2+saved.levels.shield+(saved.selected==='ywing'?1:0);spawn=.5;cooldown=0;invuln=0;gameOver=false;playing=true;player.position.set(0,0,8);$('#message').textContent='';$('#startGame').style.display='none';updateHUD();updateMissionStats()}
+function changeShip(id){scene.remove(player);player=buildShip(id);scene.add(player);player.position.set(0,0,8);saved.selected=id;persist();updateHUD()}
+const upgradeInfo={laser:{name:'🔫 Laservapen',desc:'Fler laserskott och snabbare eld.'},engine:{name:'⚡ Motor',desc:'Flyg snabbare åt alla håll.'},shield:{name:'🛡️ Sköld',desc:'Ett extra liv per nivå vid ny omgång.'}};
+function renderShop(){updateHUD();updateMissionStats();$('#ships').innerHTML='';for(let s of shipsData){const card=document.createElement('div');card.className='card';const title=document.createElement('strong');title.textContent=s.name;const desc=document.createElement('p');desc.textContent=s.desc;const btn=document.createElement('button');const owned=saved.owned.includes(s.id);btn.textContent=saved.selected===s.id?'✓ Valt skepp':owned?'Byt till skeppet':`Köp – ${s.price} 🪙`;btn.disabled=saved.selected===s.id;btn.addEventListener('click',()=>{if(!owned){if(saved.credits<s.price){$('#notice').textContent='Du behöver fler credits!';return}saved.credits-=s.price;saved.owned.push(s.id)}changeShip(s.id);$('#notice').textContent='Skeppet är redo!';renderShop()});card.append(title,desc,btn);$('#ships').append(card)}
+$('#upgrades').innerHTML='';const missileCard=document.createElement('div');missileCard.className='card';const missileTitle=document.createElement('strong');missileTitle.textContent='🚀 Målsökande missil';const missileDesc=document.createElement('p');missileDesc.textContent=`${missiles}/3 i lager · högst 3 kan användas per runda. Pris: 60 credits.`;const buyMissile=document.createElement('button');buyMissile.textContent='Köp missil · 60 🪙';buyMissile.disabled=missiles>=3||saved.credits<60;buyMissile.addEventListener('click',()=>{if(missiles>=3||saved.credits<60)return;saved.credits-=60;missiles++;persist();renderShop()});missileCard.append(missileTitle,missileDesc,buyMissile);$('#upgrades').append(missileCard);for(let [key,info] of Object.entries(upgradeInfo)){const level=saved.levels[key],cost=level*80;const card=document.createElement('div');card.className='card';const title=document.createElement('strong');title.textContent=info.name+' – nivå '+level+'/5';const desc=document.createElement('p');desc.textContent=info.desc;const btn=document.createElement('button');btn.textContent=level===5?'MAX NIVÅ':`Uppgradera – ${cost} 🪙`;btn.disabled=level===5;btn.addEventListener('click',()=>{if(saved.credits<cost){$('#notice').textContent='Du behöver fler credits!';return}saved.credits-=cost;saved.levels[key]++;persist();$('#notice').textContent='Uppgraderingen är installerad!';renderShop()});card.append(title,desc,btn);$('#upgrades').append(card)}}
+function toggleShop(open){shopOpen=open;paused=open;$('#shop').classList.toggle('open',open);if(open){$('#notice').textContent='';renderShop()}else if(!playing&&!gameOver){$('#message').textContent='X-WING MK XIX · NIVÅ 1–10 · TRYCK SPELA NU!'}}
+$('#startGame').addEventListener('click',()=>{toggleShop(false);reset();$('#startGame').style.display='none'});$('#shopOpen').addEventListener('click',()=>toggleShop(!shopOpen));$('#shopClose').addEventListener('click',()=>toggleShop(false));$('#restart').addEventListener('click',()=>{toggleShop(false);openMission()});
+document.addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.code==='KeyB'){toggleShop(!shopOpen);return}if(shopOpen){if(e.code==='Escape')toggleShop(false);return}if(!document.querySelector('#missionSetup').classList.contains('hidden'))return;keys[e.code]=true;if(e.code==='KeyM'){launchMissile();return}if(e.code==='KeyR'){openMission();return}if(!playing&&(e.code==='Enter'||e.code==='Space')){openMission();return}});
+document.addEventListener('keyup',e=>keys[e.code]=false);renderer.domElement.addEventListener('mousemove',e=>{
+ const rect=renderer.domElement.getBoundingClientRect();
+ mouseCursor.x=e.clientX;mouseCursor.y=e.clientY;mouseTarget.x=THREE.MathUtils.clamp(((e.clientX-rect.left)/rect.width-.5)*34,-17,17);
+ mouseTarget.y=THREE.MathUtils.clamp((.5-(e.clientY-rect.top)/rect.height)*18,-9,9);
+});
+renderer.domElement.addEventListener('click',()=>{if(shopOpen)return;if(!playing)openMission();else fire()});
+function fire(){if(!playing||paused||cooldown>0)return;cooldown=Math.max(.065,(.25-saved.levels.laser*.032)*(missionLevel===10?.60:1));const count=saved.selected==='falcon'?3:saved.levels.laser>=3?3:2;for(let i=0;i<count;i++){const x=(i-(count-1)/2)*2.5;const s=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,2,6),green);s.rotation.x=Math.PI/2;s.position.set(player.position.x+x,player.position.y,player.position.z-3);// Rikta varje laserskott mot musens sikte i 3D.
+const ndc=new THREE.Vector2((mouseCursor.x/innerWidth)*2-1,1-(mouseCursor.y/innerHeight)*2);
+const ray=new THREE.Raycaster();ray.setFromCamera(ndc,camera);
+const aimPlane=new THREE.Plane(new THREE.Vector3(0,0,1),85);
+const target=new THREE.Vector3();
+if(!ray.ray.intersectPlane(aimPlane,target))target.set(player.position.x,player.position.y,-85);
+s.userData.velocity=target.sub(s.position).normalize().multiplyScalar(105);
+s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),s.userData.velocity.clone().normalize());
+scene.add(s);shots.push(s)}}
+
+// MK XIII: live cinematic battlefield (all actual 3D objects, not a still image).
+const cinematic=new THREE.Group();scene.add(cinematic);
+// Textured blue world, cheap canvas generated once.
+const worldCanvas=document.createElement('canvas');worldCanvas.width=512;worldCanvas.height=256;
+const wc=worldCanvas.getContext('2d');const ocean=wc.createLinearGradient(0,0,0,256);ocean.addColorStop(0,'#153b80');ocean.addColorStop(.52,'#1374a5');ocean.addColorStop(1,'#061c4c');wc.fillStyle=ocean;wc.fillRect(0,0,512,256);
+for(let i=0;i<140;i++){let x=Math.random()*512,y=Math.random()*256,r=3+Math.random()*23;wc.fillStyle=Math.random()<.65?'rgba(117,169,127,.66)':'rgba(206,219,192,.42)';wc.beginPath();wc.ellipse(x,y,r,r*(.2+Math.random()*.5),Math.random()*6.28,0,Math.PI*2);wc.fill()}
+for(let i=0;i<200;i++){wc.fillStyle='rgba(245,252,255,'+(.06+Math.random()*.18)+')';wc.beginPath();wc.ellipse(Math.random()*512,Math.random()*256,3+Math.random()*35,1+Math.random()*7,Math.random()*6.28,0,6.283);wc.fill()}
+const worldTexture=new THREE.CanvasTexture(worldCanvas);worldTexture.colorSpace=THREE.SRGBColorSpace;
+const planet=new THREE.Mesh(new THREE.SphereGeometry(95,40,24),new THREE.MeshStandardMaterial({map:worldTexture,roughness:1,emissive:0x082b53,emissiveIntensity:.23}));planet.position.set(115,45,-310);cinematic.add(planet);
+const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(97,32,20),new THREE.MeshBasicMaterial({color:0x36aaff,transparent:true,opacity:.10,side:THREE.BackSide,depthWrite:false}));atmosphere.position.copy(planet.position);cinematic.add(atmosphere);
+// Capital ship silhouette: a detailed wedge hull with lit decks and command bridge.
+const cruiser=new THREE.Group();cinematic.add(cruiser);
+const hullShape=new THREE.Shape();hullShape.moveTo(0,-43);hullShape.lineTo(-24,18);hullShape.lineTo(24,18);hullShape.closePath();
+const hull=new THREE.Mesh(new THREE.ExtrudeGeometry(hullShape,{depth:4,bevelEnabled:true,bevelSize:1.4,bevelThickness:1.3,bevelSegments:1}),new THREE.MeshStandardMaterial({color:0x8998a6,metalness:.68,roughness:.57}));hull.rotation.x=-Math.PI/2;cruiser.add(hull);
+const deckmat=new THREE.MeshStandardMaterial({color:0x52606d,metalness:.7,roughness:.45});
+for(let k=0;k<4;k++){const deck=new THREE.Mesh(new THREE.BoxGeometry(20-k*3,1.5,6+k*2),deckmat);deck.position.set(0,4+k*1.7,-3+k*2);cruiser.add(deck)}
+const bridge=new THREE.Mesh(new THREE.BoxGeometry(9,3,3),deckmat);bridge.position.set(0,12,7);cruiser.add(bridge);
+for(let i=0;i<95;i++){const x=(Math.random()-.5)*38,z=(Math.random()-.5)*31;const dot=new THREE.Mesh(new THREE.BoxGeometry(.2,.18,.2),new THREE.MeshBasicMaterial({color:i%5?0xffd59a:0x8bdcff}));dot.position.set(x,1.8,z);cruiser.add(dot)}
+cruiser.position.set(55,24,-185);cruiser.rotation.set(-.10,-.32,.06);cruiser.scale.setScalar(.85);
+// Low-poly rocky asteroid field with flat-shaded physical geometry and variable rotation.
+const asteroidGeo=new THREE.IcosahedronGeometry(1,1);
+const rockMaterials=[0x726b62,0x99918b,0x4d5057].map(c=>new THREE.MeshStandardMaterial({color:c,roughness:1,flatShading:true}));
+const asteroids=[];
+for(let i=0;i<36;i++){const a=new THREE.Mesh(asteroidGeo,rockMaterials[i%3]);const r=.65+Math.pow(Math.random(),2)*6;a.scale.set(r*(.8+Math.random()*.5),r*(.7+Math.random()*.6),r*(.7+Math.random()*.7));a.position.set((Math.random()-.5)*165,(Math.random()-.5)*90,-25-Math.random()*240);a.rotation.set(Math.random()*6,Math.random()*6,Math.random()*6);cinematic.add(a);asteroids.push(a)}
+// Cockpit supplemental lit instruments, mounted in camera-space and visible during flight.
+const instruments=new THREE.Group();camera.add(instruments);
+const panelDark=new THREE.MeshStandardMaterial({color:0x0d1720,metalness:.6,roughness:.36});
+const neonGreen=new THREE.MeshBasicMaterial({color:0x38ff80});
+const neonRed=new THREE.MeshBasicMaterial({color:0xff3e4d});
+function instBox(x,y,z,w,h,d,m){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);instruments.add(mesh);return mesh}
+// Screens are supplementary; leave the real cockpit's existing texture and shape intact.
+const radarFace=document.createElement('canvas');radarFace.width=256;radarFace.height=256;const cinematicRC=radarFace.getContext('2d');
+const radarTexture=new THREE.CanvasTexture(radarFace);
+const radarPlane=new THREE.Mesh(new THREE.PlaneGeometry(.67,.67),new THREE.MeshBasicMaterial({map:radarTexture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
+radarPlane.position.set(0,-1.57,-2.10);instruments.add(radarPlane);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(.36,.025,6,48),new THREE.MeshStandardMaterial({color:0x455c64,metalness:.8,roughness:.32}));ring.position.set(0,-1.57,-2.115);instruments.add(ring);
+const ledGroup=new THREE.Group();instruments.add(ledGroup);
+for(let i=0;i<32;i++){const led=new THREE.Mesh(new THREE.BoxGeometry(.025,.018,.012),i%7===0?neonRed:neonGreen);led.position.set((i-15.5)*.047,-1.10,-2.13);ledGroup.add(led)}
+let sweep=0;
+function updateCinematic(dt,now){
+ planet.rotation.y+=dt*.0015;cruiser.rotation.y+=dt*.002;
+ const travel=playing&&!paused?dt*12:dt*.6;
+ for(const a of asteroids){a.position.z+=travel;a.rotation.x+=dt*.07;a.rotation.y+=dt*.09;if(a.position.z>camera.position.z-7){a.position.z=-210-Math.random()*60;a.position.x=player.position.x+(Math.random()-.5)*165;a.position.y=player.position.y+(Math.random()-.5)*90}}
+ sweep+=dt*.8;cinematicRC.clearRect(0,0,256,256);cinematicRC.fillStyle='#00180b';cinematicRC.fillRect(0,0,256,256);cinematicRC.strokeStyle='#18a84b';cinematicRC.lineWidth=2;
+ for(const r of [35,70,103]){cinematicRC.beginPath();cinematicRC.arc(128,128,r,0,Math.PI*2);cinematicRC.stroke()}
+ cinematicRC.beginPath();cinematicRC.moveTo(128,22);cinematicRC.lineTo(128,234);cinematicRC.moveTo(22,128);cinematicRC.lineTo(234,128);cinematicRC.stroke();
+ cinematicRC.strokeStyle='#74ff9b';cinematicRC.beginPath();cinematicRC.moveTo(128,128);cinematicRC.lineTo(128+104*Math.cos(sweep),128+104*Math.sin(sweep));cinematicRC.stroke();
+ cinematicRC.fillStyle='#aaffbf';cinematicRC.beginPath();cinematicRC.moveTo(128,128);cinematicRC.lineTo(121,142);cinematicRC.lineTo(135,142);cinematicRC.fill();
+ for(const e of enemies){const x=128+(e.position.x-player.position.x)*2.2,y=128+(e.position.z-player.position.z)*-.8;if(x>25&&x<231&&y>25&&y<231){cinematicRC.fillStyle='#ff5348';cinematicRC.beginPath();cinematicRC.arc(x,y,4,0,6.283);cinematicRC.fill()}}
+ radarTexture.needsUpdate=true;
+}
+// Improved cockpit color balance, inexpensive on the old iMac.
+renderer.toneMappingExposure=1.62;
+scene.fog.density=.0018;
+const cinematicLabel=document.createElement('div');cinematicLabel.textContent='✦ MK XIV · CINEMATIC CANOPY · PLANET · ASTEROIDER · LIVE 3D';cinematicLabel.style.cssText='position:fixed;top:90px;left:50%;transform:translateX(-50%);font:700 11px monospace;letter-spacing:1px;color:#86dfff;text-shadow:0 0 7px #0062a9;pointer-events:none;z-index:4';document.body.appendChild(cinematicLabel);
+
+let last=performance.now();// MK XII: rymdfartseffekt. Stjärnor rusar mot piloten även när inga fiender syns.
+const starCount=600,starPositions=new Float32Array(starCount*3);
+for(let i=0;i<starCount;i++){
+ const j=i*3;starPositions[j]=(Math.random()-.5)*155;
+ starPositions[j+1]=(Math.random()-.5)*100;
+ starPositions[j+2]=-10-Math.random()*400;
+}
+const starGeometry=new THREE.BufferGeometry();starGeometry.setAttribute('position',new THREE.BufferAttribute(starPositions,3));
+const starMaterial=new THREE.PointsMaterial({color:0xc5e7ff,size:.42,sizeAttenuation:true,transparent:true,opacity:.95,depthWrite:false});
+const flightStars=new THREE.Points(starGeometry,starMaterial);scene.add(flightStars);
+let flightDistance=0;
+const speedHud=document.createElement('div');speedHud.style.cssText='position:fixed;right:15px;bottom:18px;color:#a9f6ff;background:#06121ccf;padding:10px 14px;border:1px solid #398aa5;border-radius:6px;font:700 15px monospace;z-index:5;pointer-events:none';
+speedHud.textContent='🚀 MOTORER KLARA · 0 KM/H';document.body.appendChild(speedHud);
+function updateFlightStars(dt){
+ const thrust=playing&&!paused?1:0.08;
+ flightDistance+=dt*thrust*65;
+ for(let i=0;i<starCount;i++){
+  const j=i*3;starPositions[j+2]+=dt*thrust*(65+(i%11)*3);
+  if(starPositions[j+2]>camera.position.z-5){starPositions[j]=(Math.random()-.5)*155+player.position.x;starPositions[j+1]=(Math.random()-.5)*100+player.position.y;starPositions[j+2]=camera.position.z-350-Math.random()*80;}
+ }
+ starGeometry.attributes.position.needsUpdate=true;
+ speedHud.textContent=playing&&!paused?'🚀 HASTIGHET 1 050 KM/H · DISTANS '+Math.floor(flightDistance)+' KM':'🚀 MOTORER KLARA · TRYCK SPELA NU';
+}
+let flightBank=0,flightPitch=0,flightYaw=0;let smoothAimX=innerWidth/2,smoothAimY=innerHeight*.46;const aimEl=document.querySelector('#crosshair');
+function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-last)/1000,.05);last=now;const follow=1-Math.exp(-22*dt);smoothAimX+=(mouseCursor.x-smoothAimX)*follow;smoothAimY+=(mouseCursor.y-smoothAimY)*follow;aimEl.style.left=smoothAimX+'px';aimEl.style.top=smoothAimY+'px';updateFlightStars(dt);if(!paused){updateFlyingMissiles(dt);const dx=Number(!!(keys.KeyD||keys.ArrowRight))-Number(!!(keys.KeyA||keys.ArrowLeft)),dy=Number(!!(keys.KeyW||keys.ArrowUp))-Number(!!(keys.KeyS||keys.ArrowDown));const speed=(12+saved.levels.engine*2.5)*(saved.selected==='awing'?1.3:saved.selected==='ywing'?.82:1);const targetX=THREE.MathUtils.clamp(mouseTarget.x+dx*speed*dt,-17,17);
+const targetY=THREE.MathUtils.clamp(mouseTarget.y+dy*speed*dt*.85,-9,9);
+const oldX=player.position.x;
+player.position.x=THREE.MathUtils.damp(player.position.x,targetX,5,dt);
+player.position.y=THREE.MathUtils.damp(player.position.y,targetY,5,dt);
+const aimDX=mouseTarget.x-player.position.x;
+const aimDY=mouseTarget.y-player.position.y;
+const bank=THREE.MathUtils.clamp((oldX-player.position.x)*.12-aimDX*.035,-.52,.52);
+player.rotation.z=THREE.MathUtils.damp(player.rotation.z,bank,7,dt);
+player.rotation.x=THREE.MathUtils.damp(player.rotation.x,THREE.MathUtils.clamp(-aimDY*.065,-.35,.35),6,dt);
+player.rotation.y=THREE.MathUtils.damp(player.rotation.y,THREE.MathUtils.clamp(-aimDX*.04,-.3,.3),6,dt);cooldown-=dt;if(keys.Space)fire();spawn-=dt;if(spawn<=0){const types=['tie','interceptor','bomber','droid'];const type=types[Math.floor(Math.random()*types.length)];const e=enemy(type);e.userData.hp+=Math.floor((missionLevel-1)/3);e.position.set((Math.random()-.5)*29,(Math.random()-.5)*16,-110);scene.add(e);enemies.push(e);spawn=Math.max(.22,1.65-missionLevel*.125-score*.0005)}
+for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.position.addScaledVector(s.userData.velocity,dt);if(s.position.z< -145||Math.abs(s.position.x)>180||Math.abs(s.position.y)>120){scene.remove(s);shots.splice(i,1);continue}let hit=false;for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];if(Math.abs(s.position.z-e.position.z)<3&&Math.abs(s.position.x-e.position.x)<e.userData.radius&&Math.abs(s.position.y-e.position.y)<2.3){e.userData.hp--;scene.remove(s);shots.splice(i,1);hit=true;if(e.userData.hp<=0){if(e.userData.type==='destroyer'){bossDefeated=true;recordRound();playing=false;gameOver=true;$('#message').innerHTML='🏆 SEGER! STAR DESTROYER BESEGRAD!<br><small>Tryck Starta om för en ny runda</small>';$('#startGame').style.display='';}score+=e.userData.reward;saved.credits+=e.userData.reward;persist();updateHUD();explosion(e.position.x,e.position.y,e.position.z);scene.remove(e);enemies.splice(j,1)}break}}if(hit)continue;
+for(const a of asteroids){if(Math.abs(s.position.z-a.position.z)<Math.max(3,a.scale.x*1.2)&&Math.abs(s.position.x-a.position.x)<a.scale.x*1.4&&Math.abs(s.position.y-a.position.y)<a.scale.y*1.4){scene.remove(s);shots.splice(i,1);explosion(a.position.x,a.position.y,a.position.z,0xffc477);a.position.set((Math.random()-.5)*140,(Math.random()-.5)*80,-160-Math.random()*120);score+=5;saved.credits+=2;asteroidHits++;persist();updateHUD();break}}
+}
+invuln-=dt;for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];e.position.z+=(e.userData.type==='destroyer'?2.4:18+missionLevel*4+Math.min(score*.018,22))*dt;e.rotation.z+=dt*.3;if(e.position.z>14){if(invuln<=0&&Math.abs(e.position.x-player.position.x)<3.3&&Math.abs(e.position.y-player.position.y)<2.8){lives--;flashUntil=performance.now()+250;invuln=1.3;updateHUD();if(lives<=0){recordRound();playing=false;gameOver=true;updateMissionStats();$('#message').innerHTML='GAME OVER 💥<br><small style="font-size:17px">Poäng: '+score+' · Credits sparas!<br>Tryck R eller öppna hangaren.</small>'}}explosion(e.position.x,e.position.y,e.position.z,0xff5533);scene.remove(e);enemies.splice(i,1)}}player.visible=invuln<=0||Math.floor(now/110)%2===0}
+for(let i=effects.length-1;i>=0;i--){const p=effects[i];p.userData.life-=dt;p.position.addScaledVector(p.userData.velocity,dt);if(p.userData.megaBall){const t=1-p.userData.life/p.userData.initialLife;p.scale.setScalar(Math.max(.01,1+t*p.userData.megaSize));p.material.opacity=Math.max(0,(1-t)*.88)}else if(p.userData.shock){const t=1-p.userData.life/p.userData.initialLife;p.scale.setScalar(1+t*p.userData.shockSize);p.material.opacity=Math.max(0,(1-t)*.8)}else if(p.userData.smoke){const t=1-p.userData.life/p.userData.initialLife;p.scale.setScalar(1+t*(p.userData.fiery?2:3));p.material.opacity=Math.max(0,(1-t)*(p.userData.fiery?.95:.55))}else{p.scale.setScalar(Math.max(.01,p.userData.life))}if(p.userData.life<=0){scene.remove(p);p.geometry.dispose();p.material.dispose();effects.splice(i,1)}}
+for(const t of trails){t.position.z+=dt*75;if(t.position.z>12){t.position.z=-185;t.position.x=(Math.random()-.5)*80;t.position.y=(Math.random()-.5)*48}}
+$('#hitFlash').style.opacity=performance.now()<flashUntil?'.22':'0';
+// Förstaperson: kameran sitter i cockpit och följer skeppets rörelse.
+camera.position.set(player.position.x,player.position.y+1.1,player.position.z+1.5);
+camera.lookAt(player.position.x,player.position.y+1.1,-45);
+// MK XIV FIX: synlig bankning i förstaperson när musen styr skeppet.
+// Kameran och den riktiga cockpitmodellen är sammanlänkade.
+const steerX=THREE.MathUtils.clamp((mouseCursor.x/innerWidth-.5)*2,-1,1);
+const steerY=THREE.MathUtils.clamp((mouseCursor.y/innerHeight-.5)*2,-1,1);
+const desiredBank=-steerX*.34;
+const desiredPitch=-steerY*.11;
+const desiredYaw=-steerX*.09;
+flightBank=THREE.MathUtils.damp(flightBank,desiredBank,3.8,dt);
+flightPitch=THREE.MathUtils.damp(flightPitch,desiredPitch,3.5,dt);
+flightYaw=THREE.MathUtils.damp(flightYaw,desiredYaw,3.5,dt);
+camera.rotateZ(flightBank);
+camera.rotateX(flightPitch);
+camera.rotateY(flightYaw);
+// Styrspaken lutar mot musens position när piloten svänger.
+const stickX=THREE.MathUtils.clamp((mouseCursor.x/innerWidth-.5)*2,-1,1);
+const stickY=THREE.MathUtils.clamp((mouseCursor.y/innerHeight-.5)*2,-1,1);
+stickGroup.rotation.z=THREE.MathUtils.damp(stickGroup.rotation.z,-stickX*.32,9,dt);
+stickGroup.rotation.x=THREE.MathUtils.damp(stickGroup.rotation.x,stickY*.26,9,dt);
+// Tiny cockpit vibration and bank feedback, restrained for comfort.
+cabin.rotation.z=THREE.MathUtils.damp(cabin.rotation.z,-player.rotation.z*.19,3,dt);
+cabin.rotation.x=THREE.MathUtils.damp(cabin.rotation.x,-player.rotation.x*.12,3,dt);
+player.visible=viewMode==='outside';
+if(viewMode==='outside'){camera.position.set(player.position.x,player.position.y+5,player.position.z+19);camera.lookAt(player.position.x,player.position.y,-60)}
+const cross=$('#crosshair');cross.style.left=mouseCursor.x+'px';cross.style.top=mouseCursor.y+'px';
+const nearest=enemies.find(e=>{const p=e.position.clone().project(camera);const sx=(p.x+1)*innerWidth/2,sy=(1-p.y)*innerHeight/2;return Math.hypot(sx-mouseCursor.x,sy-mouseCursor.y)<55&&p.z<1});
+cross.style.color=nearest?'#ff625f':'#7aff8e';cross.style.textShadow=nearest?'0 0 12px #ff2020':'0 0 8px #00ff66';
+
+$('#targetHud').innerHTML=nearest?'TARGET LOCK // '+nearest.userData.type.toUpperCase()+'<br>WEAPONS ● FIRE':'RED FIVE // SYSTEM ONLINE<br>WEAPONS ● ARMED';
+updateRadar(dt);updateCinematic(dt,now);renderer.render(scene,camera)}
+playing=false;paused=true;showHistory();updateMissionStats();requestAnimationFrame(loop);window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateHUD();
+</script>
+<style id="mk14-cinematic-style">
+#cinematicCanopy{position:fixed;inset:0;z-index:2;pointer-events:none;width:100%;height:100%;opacity:.92;filter:drop-shadow(0 1px 2px #03060b)}
+#cinematicCanopy .steel{fill:none;stroke:#263846;stroke-width:12;stroke-linejoin:round}
+#cinematicCanopy .rim{fill:none;stroke:#8599a5;stroke-width:2;opacity:.72}
+#cinematicCanopy .bolt{fill:#b4a8a0;stroke:#1d2730;stroke-width:1.5}
+#cinematicVignette{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 70% 62% at 50% 44%,transparent 30%,rgba(0,7,16,.13) 64%,rgba(0,4,10,.73) 100%)}
+#cinematicStatus{position:fixed;bottom:17px;left:50%;transform:translateX(-50%);z-index:4;pointer-events:none;padding:6px 16px;background:linear-gradient(90deg,transparent,#071d2bcc,transparent);color:#8eeaff;font:700 12px monospace;letter-spacing:2px;text-shadow:0 0 10px #04aaff;white-space:nowrap}
+#cinematicCorner{position:fixed;top:122px;right:24px;z-index:4;pointer-events:none;color:#f5d18e;text-shadow:0 0 8px #f2b44a;font:700 11px monospace;letter-spacing:1.3px;line-height:1.9;text-align:right}
+#cinematicCanopy{display:block}
+@media(max-width:700px){#cinematicStatus{font-size:9px}#cinematicCorner{display:none}}
+</style>
+<div id="cinematicVignette"></div>
+<svg id="cinematicCanopy" viewBox="0 0 1600 900" preserveAspectRatio="none" aria-hidden="true">
+<defs><linearGradient id="canopySteel" x1="0" x2="1"><stop stop-color="#111c28"/><stop offset=".52" stop-color="#52616b"/><stop offset="1" stop-color="#121c26"/></linearGradient></defs>
+<!-- Narrow, movie-inspired frame, kept at screen edges to preserve flight visibility -->
+<path d="M0 0 L200 0 L332 202 L348 225 M1600 0 L1400 0 L1268 202 L1252 225" stroke="url(#canopySteel)" stroke-width="23" fill="none"/>
+<path d="M0 0 L200 0 L332 202 M1600 0 L1400 0 L1268 202" class="rim"/>
+<path d="M0 0 L0 900 L190 900 L112 580 L60 275 L0 175 M1600 0 L1600 900 L1410 900 L1488 580 L1540 275 L1600 175" fill="#111c27" stroke="#425361" stroke-width="8"/>
+<path d="M0 900 L450 900 L520 824 L1080 824 L1150 900 L1600 900" fill="#1b2832" stroke="#536675" stroke-width="8"/>
+<path d="M0 872 L448 872 L520 815 M1600 872 L1152 872 L1080 815" class="rim"/>
+<path d="M0 370 L78 380 L155 785 M1600 370 L1522 380 L1445 785" stroke="#768591" stroke-width="5" fill="none" opacity=".65"/>
+<g><circle class="bolt" cx="175" cy="30" r="6"/><circle class="bolt" cx="1425" cy="30" r="6"/><circle class="bolt" cx="70" cy="735" r="6"/><circle class="bolt" cx="1530" cy="735" r="6"/></g>
+</svg>
+<div id="cinematicStatus">RED FIVE • FLIGHT SYSTEMS ONLINE • TARGET LOCK READY</div>
+<div id="cinematicCorner">T-65B X-WING<br>REBEL ALLIANCE<br>COCKPIT MK XX</div>
+
+<style id="mk20-cockpit">
+/* MK20: cockpit instrumenter, uden at ændre spillets kampmotor */
+#mk20Dash{position:fixed;inset:0;pointer-events:none;z-index:3;font-family:monospace;color:#b9f5d7;text-shadow:0 0 6px #17d88780}
+.mk20Panel{position:absolute;bottom:35px;width:clamp(145px,19vw,290px);height:clamp(110px,18vh,180px);background:linear-gradient(155deg,#15212bfa,#070f19f8);border:5px ridge #65727a;box-shadow:0 0 0 3px #151d26, inset 0 0 28px #01070c;border-radius:13px 13px 4px 4px;padding:10px 12px}
+#mk20Left{left:clamp(6px,6vw,95px);transform:perspective(550px) rotateY(12deg) rotateZ(-2deg)}
+#mk20Right{right:clamp(6px,6vw,95px);transform:perspective(550px) rotateY(-12deg) rotateZ(2deg)}
+.mk20Title{font-size:11px;letter-spacing:2px;color:#e3c589;border-bottom:1px solid #506774;padding-bottom:5px}
+#mk20Radar{width:100%;height:calc(100% - 22px);display:block}
+.mk20Gauge{margin-top:9px;font-size:11px}
+.mk20Track{height:9px;background:#030a10;border:1px solid #63777d;border-radius:2px;margin-top:4px;overflow:hidden}
+.mk20Fill{height:100%;background:linear-gradient(90deg,#168c68,#66f3b3);width:100%;transition:width .3s}
+#mk20Armor{background:linear-gradient(90deg,#2e8cd2,#9cecff)}
+#mk20Warn{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font:bold 11px monospace;letter-spacing:2px;color:#f6c579;background:#111c28d9;padding:5px 12px;border:1px solid #7d6040;border-radius:4px}
+.mk20Lights{display:flex;gap:8px;margin-top:9px}
+.mk20Led{width:9px;height:9px;border-radius:50%;background:#65ff96;box-shadow:0 0 10px #65ff96}
+.mk20Led.amber{background:#ffbe57;box-shadow:0 0 10px #ffbe57}
+#mk20Top{position:absolute;top:17%;left:50%;transform:translateX(-50%);font:10px monospace;letter-spacing:3px;color:#7be8cd99}
+body.externalView #mk20Dash{display:none!important}
+@media(max-width:700px){.mk20Panel{width:34vw;height:115px;bottom:25px;padding:6px;border-width:3px}.mk20Title{font-size:8px;letter-spacing:0}.mk20Gauge{font-size:8px;margin-top:4px}.mk20Lights{display:none}#mk20Warn,#mk20Top{display:none}}
+</style>
+<div id="mk20Dash" aria-hidden="true">
+  <div id="mk20Top">T-65B // RED FIVE // FLIGHT COMPUTER</div>
+  <div id="mk20Left" class="mk20Panel">
+    <div class="mk20Title">◈ R2 ASTROMECH RADAR</div>
+    <canvas id="mk20Radar" width="270" height="140"></canvas>
+  </div>
+  <div id="mk20Right" class="mk20Panel">
+    <div class="mk20Title">▣ SYSTEM STATUS</div>
+    <div class="mk20Gauge">DEFLECTOR SHIELDS <span id="mk20ShieldText" style="float:right">100%</span><div class="mk20Track"><div class="mk20Fill" id="mk20Shield"></div></div></div>
+    <div class="mk20Gauge">HULL INTEGRITY <span id="mk20HullText" style="float:right">100%</span><div class="mk20Track"><div class="mk20Fill" id="mk20Armor"></div></div></div>
+    <div class="mk20Lights"><span class="mk20Led"></span><span class="mk20Led"></span><span class="mk20Led amber"></span><span style="font-size:9px;color:#8b9fa8">S-FOILS LOCKED</span></div>
+  </div>
+  <div id="mk20Warn">● REBEL FLIGHT SYSTEMS ONLINE ●</div>
+</div>
+<script>
+(()=> {
+ const radar=document.getElementById('mk20Radar'), ctx=radar.getContext('2d');
+ const shield=document.getElementById('mk20Shield'), armor=document.getElementById('mk20Armor');
+ let tick=0;
+ function render(){
+  const w=radar.width,h=radar.height,cx=w/2,cy=h/2,r=Math.min(w*.43,h*.46);
+  ctx.clearRect(0,0,w,h);ctx.fillStyle='#03160f';ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='#246c4a';ctx.lineWidth=1;
+  for(let i=1;i<=3;i++){ctx.beginPath();ctx.ellipse(cx,cy,r*i/3,r*i/3,0,0,Math.PI*2);ctx.stroke()}
+  ctx.beginPath();ctx.moveTo(cx-r,cy);ctx.lineTo(cx+r,cy);ctx.moveTo(cx,cy-r);ctx.lineTo(cx,cy+r);ctx.stroke();
+  const a=tick*.028;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(a);
+  const sweep=ctx.createLinearGradient(0,0,r,0);sweep.addColorStop(0,'#64ff9930');sweep.addColorStop(1,'#64ff9900');
+  ctx.fillStyle=sweep;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,-.65,0);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#68ffa8';ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(r,0);ctx.stroke();ctx.restore();
+  for(let i=0;i<5;i++){let x=cx+Math.cos(i*2.7)*r*(.3+(i%3)*.2),y=cy+Math.sin(i*2.7)*r*(.3+(i%3)*.2);
+   ctx.fillStyle=i%2?'#ff725e':'#8dffba';ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle='#a8ffca';ctx.fillRect(cx-3,cy-3,6,6);
+  const lives=Number(document.getElementById('lives')?.textContent)||0;
+  const pct=Math.max(0,Math.min(100,Math.round(lives/3*100)));
+  shield.style.width=pct+'%';armor.style.width=pct+'%';
+  document.getElementById('mk20ShieldText').textContent=pct+'%';
+  document.getElementById('mk20HullText').textContent=pct+'%';
+  tick++;requestAnimationFrame(render);
+ }
+ render();
+})();
+</script>
+
+</body></html>
